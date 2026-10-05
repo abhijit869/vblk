@@ -15,6 +15,7 @@ from typing import Any
 
 from jarvis_core.ai_gateway import AIGateway, AIRequest, AIResponse, AIToolCall, AIToolOutput, AIToolSpec
 from jarvis_core.audit import AuditRecord, InMemoryAuditLog
+from jarvis_core.memory import SQLiteMemoryEngine
 from jarvis_core.protocol import RiskLevel, ToolDefinition, ToolRequest, ToolResult
 from jarvis_core.redaction import redact_text
 from jarvis_core.tools import ToolRegistry, build_default_registry, limit_data
@@ -29,18 +30,22 @@ class JarvisCore:
         tools: ToolRegistry | None = None,
         ai_gateway: AIGateway | None = None,
         audit_log: InMemoryAuditLog | None = None,
+        memory_engine: SQLiteMemoryEngine | None = None,
         max_risk: RiskLevel = RiskLevel.READ,
     ) -> None:
         self._tools = tools or build_default_registry()
         self._ai_gateway = ai_gateway or AIGateway()
         self._audit_log = audit_log or InMemoryAuditLog()
+        self._memory_engine = memory_engine
         self._max_risk = max_risk
 
     @property
     def audit_log(self) -> InMemoryAuditLog:
         return self._audit_log
 
-    def handle_text(self, text: str) -> dict[str, Any]:
+    def handle_text(self, text: str, session_id: str | None = None) -> dict[str, Any]:
+        if self._memory_engine and not session_id:
+            session_id = self._memory_engine.create_session()
         ai_request = AIRequest(
             prompt=text,
             tools=tuple(_tool_spec(definition) for definition in self._tools.definitions(self._max_risk)),
@@ -52,18 +57,22 @@ class JarvisCore:
         self._audit_ai(ai_request, "ai.response", ai_response)
 
         if not ai_response.tool_calls:
-            return self._response(text, ai_response.content, ai_response, None, [])
+            if self._memory_engine and session_id:
+                self._memory_engine.record_interaction(session_id, text, ai_response.content)
+            return self._response(text, ai_response.content, ai_response, None, [], session_id)
 
         calls = ai_response.tool_calls[:MAX_TOOL_CALLS_PER_REQUEST]
-        executed: list[tuple[AIToolCall, ToolResult]] = [(call, self._run_tool(call)) for call in calls]
+        executed: list[tuple[AIToolCall, ToolResult]] = [(call, self._run_tool(call, session_id)) for call in calls]
 
         outputs = [AIToolOutput(call=call, content=_result_for_ai(result)) for call, result in executed]
         answer = self._ai_gateway.respond(ai_request, outputs)
         self._audit_ai(ai_request, "ai.answer", answer)
 
-        return self._response(text, answer.content, ai_response, answer, executed)
+        if self._memory_engine and session_id:
+            self._memory_engine.record_interaction(session_id, text, answer.content)
+        return self._response(text, answer.content, ai_response, answer, executed, session_id)
 
-    def _run_tool(self, call: AIToolCall) -> ToolResult:
+    def _run_tool(self, call: AIToolCall, session_id: str | None = None) -> ToolResult:
         request = ToolRequest(
             tool=call.tool,
             arguments=dict(call.arguments),
@@ -96,6 +105,8 @@ class JarvisCore:
                 },
             )
         )
+        if self._memory_engine and session_id:
+            self._memory_engine.record_tool_call(session_id, request, result)
         return result
 
     def _audit_ai(self, request: AIRequest, event: str, response: AIResponse) -> None:
@@ -125,9 +136,11 @@ class JarvisCore:
         ai_response: AIResponse,
         answer_response: AIResponse | None,
         executed: list[tuple[AIToolCall, ToolResult]],
+        session_id: str | None = None,
     ) -> dict[str, Any]:
         results = [asdict(result) for _, result in executed]
         return {
+            "session_id": session_id,
             "input": text,
             "answer": answer,
             "ai": asdict(ai_response),

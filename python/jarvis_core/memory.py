@@ -41,6 +41,18 @@ class SQLiteMemoryEngine:
                 FOREIGN KEY(session_id) REFERENCES sessions(session_id)
             )
         """)
+        
+        self._conn.execute("""
+            CREATE TABLE IF NOT EXISTS interactions (
+                interaction_id TEXT PRIMARY KEY,
+                session_id TEXT,
+                user_input TEXT,
+                ai_response TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(session_id) REFERENCES sessions(session_id)
+            )
+        """)
+
         self._conn.commit()
 
     def create_session(self) -> str:
@@ -67,3 +79,16 @@ class SQLiteMemoryEngine:
         )
         self._conn.commit()
         return call_id
+
+
+    def record_interaction(self, session_id: str, user_input: str, ai_response: str) -> str:
+        interaction_id = str(uuid.uuid4())
+        self._conn.execute(
+            """
+            INSERT INTO interactions (interaction_id, session_id, user_input, ai_response)
+            VALUES (?, ?, ?, ?)
+            """,
+            (interaction_id, session_id, user_input, ai_response)
+        )
+        self._conn.commit()
+        return interaction_id
