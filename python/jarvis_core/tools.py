@@ -127,6 +127,26 @@ PATH_PARAMETERS = {
     "additionalProperties": False,
 }
 
+
+FILE_READ_PARAMETERS = {
+    "type": "object",
+    "required": ["path"],
+    "properties": {
+        "path": {"type": "string", "description": "Absolute or relative path to the file to read."},
+    },
+    "additionalProperties": False,
+}
+
+FILE_SEARCH_PARAMETERS = {
+    "type": "object",
+    "required": ["pattern"],
+    "properties": {
+        "pattern": {"type": "string", "description": "Glob pattern to search for (e.g. '*.py' or '*/*.md')."},
+        "path": {"type": "string", "description": "Directory to search in. Defaults to current directory."},
+    },
+    "additionalProperties": False,
+}
+
 TERMINAL_PARAMETERS = {
     "type": "object",
     "properties": {
@@ -184,6 +204,23 @@ def build_default_registry() -> ToolRegistry:
             TERMINAL_PARAMETERS,
         ),
         terminal_execute,
+    )
+    
+    registry.register(
+        ToolDefinition("network.interfaces", 1, RiskLevel.READ, False, 2000, 32768, "Return network interfaces"),
+        network_interfaces,
+    )
+    registry.register(
+        ToolDefinition("network.status", 1, RiskLevel.READ, False, 2000, 32768, "Return network routes and IP addresses"),
+        network_status,
+    )
+    registry.register(
+        ToolDefinition("file.read", 1, RiskLevel.READ, False, 2000, 262144, "Read utf-8 text file contents", FILE_READ_PARAMETERS),
+        file_read,
+    )
+    registry.register(
+        ToolDefinition("file.search", 1, RiskLevel.READ, False, 5000, 65536, "Search for files by glob pattern recursively", FILE_SEARCH_PARAMETERS),
+        file_search,
     )
     return registry
 
@@ -321,6 +358,85 @@ def terminal_execute(request: ToolRequest) -> dict[str, Any]:
         raise ToolDenied(ToolError(code="command_risk_exceeds_limit", message=result.stderr), data)
     return data
 
+
+
+def network_interfaces(_: ToolRequest) -> list[dict[str, Any]]:
+    interfaces: list[dict[str, Any]] = []
+    net_path = Path("/sys/class/net")
+    if not net_path.exists():
+        return interfaces
+    
+    for iface in net_path.iterdir():
+        if not iface.is_dir():
+            continue
+        try:
+            mac = (iface / "address").read_text(encoding="utf-8").strip()
+            state = (iface / "operstate").read_text(encoding="utf-8").strip()
+            mtu = int((iface / "mtu").read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            mac = state = ""
+            mtu = 0
+            
+        interfaces.append({
+            "name": iface.name,
+            "mac_address": mac,
+            "state": state,
+            "mtu": mtu,
+        })
+    return sorted(interfaces, key=lambda x: x["name"])
+
+
+def network_status(_: ToolRequest) -> dict[str, Any]:
+    addresses = []
+    routes = []
+    
+    try:
+        completed = subprocess.run(["ip", "-j", "address"], capture_output=True, text=True, timeout=2, check=False)
+        if completed.returncode == 0 and completed.stdout.strip():
+            addresses = json.loads(completed.stdout)
+    except (OSError, json.JSONDecodeError):
+        pass
+
+    try:
+        completed = subprocess.run(["ip", "-j", "route"], capture_output=True, text=True, timeout=2, check=False)
+        if completed.returncode == 0 and completed.stdout.strip():
+            routes = json.loads(completed.stdout)
+    except (OSError, json.JSONDecodeError):
+        pass
+
+    return {
+        "addresses": addresses,
+        "routes": routes
+    }
+
+
+def file_read(request: ToolRequest) -> dict[str, Any]:
+    path = Path(request.arguments["path"]).resolve()
+    try:
+        content = path.read_text(encoding="utf-8")
+        return {"path": str(path), "content": content}
+    except UnicodeDecodeError:
+        return {"path": str(path), "error": "file is binary or not valid utf-8"}
+    except Exception as e:
+        return {"path": str(path), "error": str(e)}
+
+
+def file_search(request: ToolRequest) -> dict[str, Any]:
+    path = Path(request.arguments.get("path", ".")).resolve()
+    pattern = request.arguments["pattern"]
+    if not path.is_dir():
+        raise OSError(f"Directory not found: {path}")
+    
+    results = []
+    try:
+        for p in path.rglob(pattern):
+            results.append(str(p))
+            if len(results) >= 1000:
+                break
+    except Exception as e:
+        return {"path": str(path), "pattern": pattern, "error": str(e)}
+        
+    return {"path": str(path), "pattern": pattern, "results": results}
 
 def _read_meminfo() -> dict[str, int]:
     values: dict[str, int] = {}

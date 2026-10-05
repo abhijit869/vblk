@@ -56,6 +56,31 @@ class ToolRegistryTests(unittest.TestCase):
         self.assertNotIn("abc123", command)
 
 
+
+    def test_network_interfaces(self) -> None:
+        result = build_default_registry().execute(ToolRequest(tool="network.interfaces"))
+        self.assertEqual(result.status, "ok")
+        self.assertIsInstance(result.data, list)
+        
+    def test_network_status(self) -> None:
+        result = build_default_registry().execute(ToolRequest(tool="network.status"))
+        self.assertEqual(result.status, "ok")
+        self.assertIsInstance(result.data, dict)
+        self.assertIn("addresses", result.data)
+        
+    def test_file_read(self) -> None:
+        # We can read our own test file
+        result = build_default_registry().execute(ToolRequest(tool="file.read", arguments={"path": "tests/unit/test_tools.py"}))
+        self.assertEqual(result.status, "ok")
+        self.assertIn("build_default_registry", result.data["content"])
+        
+    def test_file_search(self) -> None:
+        result = build_default_registry().execute(ToolRequest(tool="file.search", arguments={"path": "tests/unit", "pattern": "*.py"}))
+        self.assertEqual(result.status, "ok")
+        self.assertIsInstance(result.data["results"], list)
+        self.assertIn("test_tools.py", str(result.data["results"]))
+
+
 class FakeProcessPath:
     def __init__(self, cmdline: bytes) -> None:
         self._cmdline = cmdline
