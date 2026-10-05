@@ -575,7 +575,7 @@ class AIGateway:
 class GeminiProvider(AIProvider):
     """Gemini REST API Provider for JARVIS Core Brain."""
 
-    def __init__(self, api_key: str, model: str = "gemini-1.5-flash", timeout_ms: int = 30000) -> None:
+    def __init__(self, api_key: str, model: str = "gemini-3.5-flash", timeout_ms: int = 30000) -> None:
         self.api_key = api_key
         self._model = model
         self._timeout_ms = timeout_ms
@@ -624,10 +624,15 @@ class GeminiProvider(AIProvider):
         if request.tools:
             function_declarations = []
             for t in request.tools:
+                # Remove additionalProperties for Gemini
+                params = dict(t.parameters)
+                if "additionalProperties" in params:
+                    del params["additionalProperties"]
+                    
                 function_declarations.append({
                     "name": t.name.replace(".", "_"),
                     "description": t.description,
-                    "parameters": t.parameters
+                    "parameters": params
                 })
             tools.append({"functionDeclarations": function_declarations})
 
@@ -653,7 +658,7 @@ class GeminiProvider(AIProvider):
             with urllib.request.urlopen(http_request, timeout=timeout_s) as response:
                 payload = json.loads(response.read())
         except urllib.error.HTTPError as exc:
-            raise ProviderError(f"Gemini API Error: {exc.code} {exc.reason}", retryable=True) from None
+            raise ProviderError(f"Gemini API Error: {exc.code} {exc.reason} - {exc.read()}", retryable=True) from None
             
         # Parse Gemini response
         content = ""
