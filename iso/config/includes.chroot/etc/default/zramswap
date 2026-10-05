@@ -1,0 +1,3 @@
+# Enable 2GB ZRAM on 4GB machine to dramatically increase effective RAM
+ALGO=zstd
+PERCENT=50
