@@ -10,7 +10,7 @@ xorg
 openbox
 tint2
 feh
-x-terminal-emulator
+xterm
 wmctrl
 xdotool
 scrot

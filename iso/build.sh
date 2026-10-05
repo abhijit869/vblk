@@ -24,6 +24,7 @@ lb config \
     --mirror-binary-security "http://security.debian.org/debian-security/" \
     --binary-images iso-hybrid \
     --keyring-packages debian-archive-keyring \
+    --linux-packages "linux-image" \
     --bootappend-live "boot=live components quiet splash mitigations=off" # Disable mitigations for max VM performance
 
 echo "=> Deep integrating JARVIS into Debian chroot..."
