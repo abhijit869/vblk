@@ -23,7 +23,7 @@ lb config \
     --security false \
     --binary-images iso-hybrid \
     --keyring-packages debian-archive-keyring \
-    --linux-packages "none" \
+    --linux-packages "linux-image" \
     --linux-flavours "amd64" \
     --initramfs live-boot \
     --bootappend-live "boot=live components quiet splash mitigations=off" # Disable mitigations for max VM performance

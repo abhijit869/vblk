@@ -1,17 +1,16 @@
 # JARVIS OS
 
-JARVIS OS is a highly optimized, AI-native Linux operating environment built on Debian. It seamlessly integrates a continuous Background Event Bus, an automated Diagnostics Engine, secure Sandboxing, and a GUI theme merging macOS and Windows 11 aesthetics—all engineered to run exceptionally well on 4GB Virtual Machines.
+JARVIS OS is a highly optimized, AI-native Linux operating environment built on Debian 13 (Bookworm). It seamlessly integrates a continuous Background Event Bus, an automated Diagnostics Engine, secure Sandboxing, and a customized MacTahoe (macOS Big Sur style) GTK aesthetic—all engineered to run exceptionally well on 4GB Virtual Machines.
 
 ## Repository Layout
 
 ```text
-python/          JARVIS Core (Agents, Shell, Diagnostics, Security, Tools, Event Bus, D-Bus)
-desktop/         JARVIS Hybrid Desktop Themes (macOS + Windows 11 styling)
+python/          JARVIS Core (AI Gateways for Gemini/Antigravity/OpenAI, Shell, Diagnostics, Security, Tools, Event Bus, D-Bus)
+desktop/         JARVIS Desktop Themes (MacTahoe Dark Theme + Openbox configurations)
 systemd/         System daemon unit files (jarvis-core, jarvis-eventbus)
-tests/           Comprehensive unit and integration test suite
+tests/           Comprehensive unit and integration test suite (Currently passing 100%)
 iso/             Debian `live-build` configurations and hooks for generating the bootable OS
 docs/            Architecture and protocols
-plans/           Roadmap and milestone tracking
 ```
 
 ---
@@ -21,24 +20,31 @@ plans/           Roadmap and milestone tracking
 ### Phase 1: Test Locally in the Repository
 You don't have to build the entire OS to test the JARVIS AI Core. You can interact with it directly in this repository using Python.
 
-**1. Open the Interactive JARVIS Shell:**
+**1. Configure your AI Gateway:**
+Add your API keys to the `.env` file at the root of the repository:
+```env
+GEMINI_API_KEY=your_gemini_key
+OPENAI_API_KEY=your_openai_key
+```
+
+**2. Open the Interactive JARVIS Shell:**
 ```bash
 PYTHONPATH=python python3 -m jarvis_core.shell
 ```
 *(From here, you can type commands like "What is my CPU usage?", "List my top processes", or "Check security status".)*
 
-**2. Test the Automated Diagnostics:**
+**3. Test the Automated Diagnostics:**
 ```bash
 PYTHONPATH=python python3 -m jarvis_core.cli "Diagnose why the nginx service failed"
 ```
 
-**3. Run the Full Test Suite:**
+**4. Run the Full Test Suite:**
 ```bash
 PYTHONPATH=python python3 -m unittest discover -s tests
 ```
 
 ### Phase 2: Build the Bootable OS (.iso)
-To turn this repository into a real, installable Linux Operating System, you must run the Debian compiler on an Ubuntu or Debian host machine.
+To turn this repository into a real, installable Linux Operating System, you must run the Debian compiler on an Ubuntu or Debian host machine. We have automated this process to avoid common caching and configuration bugs.
 
 **1. Install Debian Live-Build Dependencies:**
 ```bash
@@ -46,23 +52,24 @@ sudo apt-get update
 sudo apt-get install -y live-build debootstrap squashfs-tools xorriso
 ```
 
-**2. Execute the Builder:**
+**2. Execute the Automated Builder Script:**
 ```bash
-cd iso
-sudo lb build
+chmod +x run_build_clean.sh
+./run_build_clean.sh
 ```
-*Note: This process takes 15-30 minutes. It downloads the base Debian OS, injects all our JARVIS code, installs the Openbox GUI, compiles the Python code, applies the 4GB VM optimizations (ZRAM, sysctl), and outputs a file named `live-image-amd64.hybrid.iso`.*
+*Note: This process takes 15-30 minutes. It securely isolates the build environment to `/tmp/jarvis_build`, downloads the base Debian OS, injects all our JARVIS code, installs the Openbox GUI with MacTahoe themes, compiles the Python code, applies 4GB VM optimizations (ZRAM, sysctl), and generates the final `live-image-amd64.hybrid.iso`.*
 
 ### Phase 3: Run the OS in a Virtual Machine
 1. Open **VirtualBox**, **VMware**, or **QEMU**.
 2. Create a new Linux VM (Debian 64-bit).
 3. Assign **4GB RAM** and at least **2 CPU Cores**.
 4. Attach the generated `.iso` file to the virtual CD/DVD drive and boot up.
-5. The OS will automatically load the Windows 11/macOS hybrid desktop, start the `jarvis-eventbus` in the background, and open a terminal connected directly to the JARVIS Shell. 
+5. The OS will automatically load the customized MacTahoe desktop, start the `jarvis-eventbus` in the background, and open a terminal connected directly to the JARVIS Shell. 
 
 ---
 
 ## Under the Hood Features
+- **AI Gateways:** Native connections to Gemini, Antigravity, and OpenAI to power diagnostic and shell capabilities.
 - **Auto-Healing:** The `jarvis-eventbus` continuously monitors `journalctl` and processes. When an anomaly is found (like a volatile cryptominer in `/tmp`), the `DiagnosisEngine` isolates the root cause and generates a repair plan.
-- **Sandboxing (`bwrap`):** All terminal commands generated by the AI are wrapped in Bubblewrap containers, rendering the host filesystem strictly read-only unless the AI holds elevated `admin` privileges.
+- **Sandboxing (`bwrap`):** All terminal commands generated by the AI are wrapped in Bubblewrap containers, rendering the host filesystem strictly read-only unless the AI holds elevated `admin` privileges. 
 - **D-Bus Integration:** External Linux apps can query JARVIS locally by messaging `com.jarvis.Core`.
