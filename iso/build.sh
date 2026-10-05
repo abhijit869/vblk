@@ -25,6 +25,8 @@ lb config \
     --keyring-packages debian-archive-keyring \
     --linux-packages "linux-image" \
     --linux-flavours "amd64" \
+    --firmware-binary false \
+    --firmware-chroot false \
     --initramfs live-boot \
     --bootappend-live "boot=live components quiet splash mitigations=off" # Disable mitigations for max VM performance
 

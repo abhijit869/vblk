@@ -23,3 +23,4 @@ apparmor-utils
 ufw
 macchanger
 cryptsetup
+firmware-linux-free
