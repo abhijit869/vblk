@@ -12,12 +12,18 @@ lb config \
     --iso-publisher "JARVIS AI Systems" \
     --iso-volume "JARVIS_OS_1.0" \
     --memtest none \
+    --parent-mirror-bootstrap "http://deb.debian.org/debian/" \
+    --parent-mirror-chroot "http://deb.debian.org/debian/" \
+    --parent-mirror-chroot-security "http://security.debian.org/debian-security/" \
+    --parent-mirror-binary "http://deb.debian.org/debian/" \
+    --parent-mirror-binary-security "http://security.debian.org/debian-security/" \
     --mirror-bootstrap "http://deb.debian.org/debian/" \
     --mirror-chroot "http://deb.debian.org/debian/" \
     --mirror-chroot-security "http://security.debian.org/debian-security/" \
     --mirror-binary "http://deb.debian.org/debian/" \
     --mirror-binary-security "http://security.debian.org/debian-security/" \
     --binary-images iso-hybrid \
+    --keyring-packages debian-archive-keyring \
     --bootappend-live "boot=live components quiet splash mitigations=off" # Disable mitigations for max VM performance
 
 echo "=> Deep integrating JARVIS into Debian chroot..."
