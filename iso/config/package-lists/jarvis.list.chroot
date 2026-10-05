@@ -23,6 +23,3 @@ apparmor-utils
 ufw
 macchanger
 cryptsetup
-fail2ban
-rkhunter
-chkrootkit
