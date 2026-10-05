@@ -1,0 +1,35 @@
+# Local Debian media artifacts
+downloads/
+debian-*-extracted/
+*.iso
+*.img
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+id_rsa*
+id_ed25519*
+
+# Build output
+build/
+dist/
+target/
+node_modules/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage/
+.coverage
+
+# Editor and OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo

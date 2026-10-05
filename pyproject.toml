@@ -1,0 +1,9 @@
+[project]
+name = "jarvis-os"
+version = "0.1.0"
+description = "JARVIS OS AI-native Linux control plane prototype"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+jarvis = "jarvis_core.cli:main"

@@ -1,0 +1,102 @@
+# JARVIS OS Security Model
+
+Security is a first-class subsystem. JARVIS OS must be safe by architecture, not by hope.
+
+## Core Rule
+
+AI never receives direct access to Linux control surfaces. All actions pass through the Tool Router, Policy Engine, audit logging, output redaction, timeout handling, and verification.
+
+## Risk Levels
+
+```text
+READ      Observes state only.
+LOW       Makes low-impact local changes.
+MEDIUM    Changes services, packages, or user-visible behavior.
+HIGH      Deletes data, modifies security-sensitive files, or can break the system.
+CRITICAL  Can destroy data, compromise credentials, format disks, or bypass trust boundaries.
+```
+
+Examples:
+
+```text
+system.cpu -> READ
+process.list -> READ
+service.restart -> MEDIUM
+package.install -> MEDIUM
+file.delete -> HIGH
+filesystem.format -> CRITICAL
+```
+
+## Required Tool Metadata
+
+Every tool must declare:
+
+```text
+name
+version
+typed arguments
+risk level
+authorization requirement
+capabilities required
+timeout
+output limit
+redaction policy
+verification behavior
+rollback behavior when applicable
+```
+
+## Authorization
+
+READ tools may run without explicit user confirmation when they expose no secrets.
+
+MEDIUM tools require policy approval and may require user authorization depending on context.
+
+HIGH and CRITICAL tools require explicit authorization, audit logging, and rollback or recovery protection where technically possible.
+
+## Secret Handling
+
+Never expose these to AI providers:
+
+```text
+API keys
+tokens
+passwords
+private keys
+browser credentials
+SSH keys
+encryption secrets
+credential store contents
+```
+
+Secret redaction happens before data reaches an AI provider and before data enters long-term memory unless explicitly marked safe.
+
+## Terminal Safety
+
+Terminal execution must use a controlled PTY layer with:
+
+```text
+command risk classification
+timeout
+process cancellation
+output limits
+secret redaction
+working directory tracking
+stdout capture
+stderr capture
+exit code capture
+signal capture
+duration capture
+audit record
+```
+
+Unrestricted AI-generated root commands are forbidden.
+
+The v0.1 terminal engine implements command risk classification, output limits, timeout handling, stdout/stderr capture, exit code capture, signal capture, working directory tracking, and secret redaction for captured text. It only allows READ-level execution through the default tool request path.
+
+## Local Emergency AI
+
+The local model only receives restricted tool access. It is for offline diagnostics and emergency operation, not normal inference.
+
+## Testing Boundary
+
+Destructive recovery tests must run only inside a VM, container lab, or dedicated test machine. They must never run against the developer's primary OS.
