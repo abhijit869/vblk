@@ -27,7 +27,7 @@ class TerminalEngineTests(unittest.TestCase):
 
     def test_redacts_secret_output(self) -> None:
         result = TerminalEngine().execute(
-            ["python3", "-c", "print('API_KEY=abc123')"],
+            ["echo", "API_KEY=abc123"],
             max_risk=RiskLevel.MEDIUM,
         )
 
@@ -37,7 +37,7 @@ class TerminalEngineTests(unittest.TestCase):
 
     def test_truncates_output(self) -> None:
         result = TerminalEngine().execute(
-            ["python3", "-c", "print('x' * 100)"],
+            ["head", "-c", "100", "/dev/zero"],
             max_risk=RiskLevel.MEDIUM,
             output_limit_bytes=10,
         )

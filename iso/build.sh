@@ -4,6 +4,7 @@
 set -e
 
 echo "=> Initializing Debian Live Build for JARVIS OS (4GB VM Optimized)..."
+export MKSQUASHFS_OPTIONS="-mem 2G"
 lb config \
     --mode debian \
     --distribution bookworm \

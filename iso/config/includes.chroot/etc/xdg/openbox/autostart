@@ -1,4 +1,4 @@
-# Set wallpaper (using our generated theme)
+# Set the packaged default wallpaper from the JARVIS theme catalog.
 feh --bg-scale /opt/jarvis/desktop/themes/wallpapers/dark_wallpaper.jpg &
 
 # Start terminal with JARVIS shell automatically

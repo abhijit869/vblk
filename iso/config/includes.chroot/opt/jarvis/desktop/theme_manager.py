@@ -6,13 +6,11 @@ and macOS (global menu bar, blur effects, dock).
 """
 
 import json
-import urllib.request
 from pathlib import Path
 
-# A curated list of elegant wallpapers representing the OS theme
 WALLPAPERS = {
-    "light": "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1920&q=80", # Gradient light
-    "dark": "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=1920&q=80",   # Abstract dark
+    "dark": "dark_wallpaper.jpg",
+    "light": "light_wallpaper.jpg",
 }
 
 GTK_THEME_TEMPLATE = """
@@ -40,22 +38,15 @@ def setup_themes(base_dir: str = "desktop/themes"):
     path = Path(base_dir)
     path.mkdir(parents=True, exist_ok=True)
     
-    # 1. Download Wallpapers
+    # 1. Register bundled wallpapers
     wallpaper_dir = path / "wallpapers"
     wallpaper_dir.mkdir(exist_ok=True)
-    
-    print("Fetching background images...")
-    for name, url in WALLPAPERS.items():
-        dest = wallpaper_dir / f"{name}_wallpaper.jpg"
-        if not dest.exists():
-            try:
-                # Add headers to avoid 403 on some CDNs
-                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                with urllib.request.urlopen(req, timeout=10) as response, open(dest, 'wb') as out_file:
-                    out_file.write(response.read())
-                print(f"Downloaded: {dest}")
-            except Exception as e:
-                print(f"Failed to download {name}: {e}")
+    missing_wallpapers = [filename for filename in WALLPAPERS.values()
+                          if not (wallpaper_dir / filename).is_file()]
+    if missing_wallpapers:
+        raise FileNotFoundError(
+            f"Missing bundled wallpapers: {', '.join(missing_wallpapers)}"
+        )
                 
     # 2. Generate CSS Theme Template
     theme_file = path / "jarvis-hybrid.css"

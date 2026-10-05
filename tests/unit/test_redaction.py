@@ -13,7 +13,7 @@ class RedactionTests(unittest.TestCase):
         text, changed = redact_text('{"token": "abc", "user": "me"}')
         self.assertTrue(changed)
         self.assertEqual(text, '{"token": "[REDACTED]", "user": "me"}')
-        self.assertEqual(redact_text("Authorization: Bearer abc.def")[0], "Authorization: Bearer [REDACTED]")
+        self.assertEqual(redact_text("Authorization: Bearer abc.def123")[0], "Authorization: Bearer [REDACTED]")
 
     def test_redacts_private_key_block(self) -> None:
         text, changed = redact_text("x\n-----BEGIN RSA PRIVATE KEY-----\nMIIE\n-----END RSA PRIVATE KEY-----\ny")

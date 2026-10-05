@@ -5,6 +5,15 @@
   "window_controls": "left",
   "corner_radius": 12,
   "blur_effects": true,
+  "wallpapers": {
+    "directory": "wallpapers",
+    "default": "dark_wallpaper.jpg",
+    "available": [
+      "dark_wallpaper.jpg",
+      "light_wallpaper.jpg"
+    ],
+    "mode": "scale"
+  },
   "ai_integration": {
     "file_explorer": true,
     "navigation": true,
