@@ -5,6 +5,7 @@ set -e
 
 echo "=> Initializing Debian Live Build for JARVIS OS (4GB VM Optimized)..."
 lb config \
+    --mode debian \
     --distribution bookworm \
     --architecture amd64 \
     --archive-areas "main contrib non-free-firmware" \
