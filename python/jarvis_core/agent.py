@@ -10,6 +10,7 @@ from jarvis_core.ai_gateway import AIGateway, AIRequest, AIToolSpec, AIToolCall,
 from jarvis_core.tools import ToolRegistry, ToolRequest
 from jarvis_core.protocol import RiskLevel
 from jarvis_core.core import _tool_spec, _result_for_ai
+from jarvis_core.rollback import SnapshotEngine
 
 
 @dataclass
@@ -32,6 +33,7 @@ class AgentEngine:
         self.ai = ai
         self.tools = tools
         self.max_risk = max_risk
+        self.snapshot_engine = SnapshotEngine()
 
     def plan(self, goal: str) -> TaskPlan:
         submit_plan_tool = AIToolSpec(
@@ -107,9 +109,25 @@ class AgentEngine:
             return step
             
         outputs = []
+        snapshot_id = None
+        
         for call in response.tool_calls:
+            # Check tool risk
+            definition = next((d for d in self.tools.definitions(self.max_risk) if d.name == call.tool), None)
+            if definition and definition.risk_level > RiskLevel.READ and snapshot_id is None:
+                # High risk action detected! Take snapshot before execution.
+                snapshot_id = self.snapshot_engine.create_snapshot(reason=f"step_{step_index}_{call.tool}")
+                
             tool_req = ToolRequest(tool=call.tool, arguments=dict(call.arguments), max_risk=self.max_risk)
             result = self.tools.execute(tool_req)
+            
+            # Auto-rollback if a critical tool explicitly failed execution
+            if not result.success and snapshot_id:
+                self.snapshot_engine.rollback(snapshot_id)
+                step.status = "failed"
+                step.error = f"Rollback triggered: {result.error}"
+                return step
+                
             outputs.append(AIToolOutput(call=call, content=_result_for_ai(result)))
             
         answer = self.ai.respond(request, outputs)
