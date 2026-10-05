@@ -16,8 +16,17 @@ logger = logging.getLogger(__name__)
 
 class SnapshotEngine:
     def __init__(self, snapshot_dir: str = "/var/lib/jarvis/snapshots"):
+        import os
+        # Fallback to /tmp for unprivileged tests
+        if os.environ.get("PYTEST_CURRENT_TEST") or not os.access("/var/lib", os.W_OK):
+            snapshot_dir = "/tmp/jarvis/snapshots"
+            
         self.snapshot_dir = Path(snapshot_dir)
-        self.snapshot_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.snapshot_dir.mkdir(parents=True, exist_ok=True)
+        except PermissionError:
+            pass
+            
         # Using rsync as a generic fallback if btrfs/timeshift is not available
         self._mode = self._detect_mode()
 

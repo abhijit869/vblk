@@ -114,7 +114,7 @@ class AgentEngine:
         for call in response.tool_calls:
             # Check tool risk
             definition = next((d for d in self.tools.definitions(self.max_risk) if d.name == call.tool), None)
-            if definition and definition.risk_level > RiskLevel.READ and snapshot_id is None:
+            if definition and definition.risk > RiskLevel.READ and snapshot_id is None:
                 # High risk action detected! Take snapshot before execution.
                 snapshot_id = self.snapshot_engine.create_snapshot(reason=f"step_{step_index}_{call.tool}")
                 
@@ -122,7 +122,7 @@ class AgentEngine:
             result = self.tools.execute(tool_req)
             
             # Auto-rollback if a critical tool explicitly failed execution
-            if not result.success and snapshot_id:
+            if result.status == "error" and snapshot_id:
                 self.snapshot_engine.rollback(snapshot_id)
                 step.status = "failed"
                 step.error = f"Rollback triggered: {result.error}"
