@@ -58,16 +58,40 @@ def load_ai_config(env: Mapping[str, str] | None = None) -> AIConfig:
 
 def build_ai_gateway(config: AIConfig | None = None) -> AIGateway:
     config = config or load_ai_config()
+    
+    # 1. Build Primary
     if config.provider == "gemini":
         from jarvis_core.ai_gateway import GeminiProvider
         primary = GeminiProvider(api_key=config.api_key or os.environ.get("GEMINI_API_KEY", ""))
-        return AIGateway(primary)
     elif config.provider == "antigravity":
         from jarvis_core.ai_gateway import AntigravityCLIProvider
         primary = AntigravityCLIProvider()
-        return AIGateway(primary)
-    elif config.provider == "mock":
-        return AIGateway(MockAIProvider())
+    elif config.provider in {"openai", "openai-compatible"}:
+        primary = OpenAICompatibleProvider(
+            model=config.model or "gpt-4o",
+            api_key=config.api_key or os.environ.get("OPENAI_API_KEY", ""),
+            base_url=config.base_url,
+            timeout_ms=config.timeout_ms,
+            name=config.provider
+        )
+    else:
+        primary = MockAIProvider()
+
+    # 2. Build Fallback
+    fallback_provider = None
+    if config.fallback == "openai":
+        fallback_provider = OpenAICompatibleProvider(
+            model="gpt-4o",
+            api_key=os.environ.get("OPENAI_API_KEY", ""),
+            name="openai"
+        )
+    elif config.fallback == "gemini":
+        from jarvis_core.ai_gateway import GeminiProvider
+        fallback_provider = GeminiProvider(api_key=os.environ.get("GEMINI_API_KEY", ""))
+    elif config.fallback == "mock":
+        fallback_provider = MockAIProvider()
+        
+    return AIGateway(primary=primary, fallback=fallback_provider, max_retries=config.max_retries)
 
 def _int(env: Mapping[str, str], key: str, default: int) -> int:
     value = env.get(key)
