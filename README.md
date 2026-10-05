@@ -1,67 +1,68 @@
 # JARVIS OS
 
-JARVIS OS is an AI-native Linux operating environment built on Debian. The project starts as a controlled runtime, tool, security, memory, diagnostics, and desktop layer on top of Debian instead of replacing the Linux kernel.
-
-The current repository is in the foundation phase. It defines the architecture, security model, protocol boundaries, development workflow, and milestone plan before adding runtime code.
-
-## Architecture
-
-Initial stack:
-
-```text
-Debian
-Linux kernel
-systemd
-D-Bus
-JARVIS system services
-JARVIS Runtime
-JARVIS Tool Router
-Policy Engine
-AI Gateway
-JARVIS Desktop
-```
-
-Core rule: AI never controls Linux directly. Requests flow through typed tools, policy checks, audit logging, output redaction, timeouts, and verification.
+JARVIS OS is a highly optimized, AI-native Linux operating environment built on Debian. It seamlessly integrates a continuous Background Event Bus, an automated Diagnostics Engine, secure Sandboxing, and a GUI theme merging macOS and Windows 11 aesthetics—all engineered to run exceptionally well on 4GB Virtual Machines.
 
 ## Repository Layout
 
 ```text
-crates/          Rust components for policy, runtime, terminal, and security-sensitive code
-python/          Python packages for AI orchestration, tools, memory, diagnostics, and agents
-desktop/         JARVIS Desktop source
-systemd/         Service unit files
-docs/            Architecture, protocols, runbooks, and product docs
-plans/           Roadmap and milestone plans
-tests/           Unit, integration, security, and recovery tests
-packaging/       Debian packaging work
-iso/             ISO overlays and build configuration
+python/          JARVIS Core (Agents, Shell, Diagnostics, Security, Tools, Event Bus, D-Bus)
+desktop/         JARVIS Hybrid Desktop Themes (macOS + Windows 11 styling)
+systemd/         System daemon unit files (jarvis-core, jarvis-eventbus)
+tests/           Comprehensive unit and integration test suite
+iso/             Debian `live-build` configurations and hooks for generating the bootable OS
+docs/            Architecture and protocols
+plans/           Roadmap and milestone tracking
 ```
 
-## Current Status
+---
 
-- Official Debian 13.7.0 amd64 netinst ISO downloaded locally.
-- ISO extracted locally for inspection.
-- Repository foundation created.
-- JARVIS v0.1 prototype includes an offline AI Gateway mock, read-only natural-language routing, policy-checked tools, audit records, process/service inspection, secret redaction, and controlled terminal execution.
+## 🚀 How to Build and Use JARVIS OS
 
-## Run The Prototype
+### Phase 1: Test Locally in the Repository
+You don't have to build the entire OS to test the JARVIS AI Core. You can interact with it directly in this repository using Python.
 
+**1. Open the Interactive JARVIS Shell:**
 ```bash
-PYTHONPATH=python python3 -m jarvis_core.cli "What is my CPU usage?"
+PYTHONPATH=python python3 -m jarvis_core.shell
+```
+*(From here, you can type commands like "What is my CPU usage?", "List my top processes", or "Check security status".)*
+
+**2. Test the Automated Diagnostics:**
+```bash
+PYTHONPATH=python python3 -m jarvis_core.cli "Diagnose why the nginx service failed"
 ```
 
-## Test
-
+**3. Run the Full Test Suite:**
 ```bash
 PYTHONPATH=python python3 -m unittest discover -s tests
 ```
 
-Current safe example:
+### Phase 2: Build the Bootable OS (.iso)
+To turn this repository into a real, installable Linux Operating System, you must run the Debian compiler on an Ubuntu or Debian host machine.
 
+**1. Install Debian Live-Build Dependencies:**
 ```bash
-PYTHONPATH=python python3 -m jarvis_core.cli "Run terminal command"
+sudo apt-get update
+sudo apt-get install -y live-build debootstrap squashfs-tools xorriso
 ```
 
-## Next Task
+**2. Execute the Builder:**
+```bash
+cd iso
+sudo lb build
+```
+*Note: This process takes 15-30 minutes. It downloads the base Debian OS, injects all our JARVIS code, installs the Openbox GUI, compiles the Python code, applies the 4GB VM optimizations (ZRAM, sysctl), and outputs a file named `live-image-amd64.hybrid.iso`.*
 
-Start JARVIS v0.2 by adding read-only network tools, file metadata/search tools, and SQLite memory for sessions, tool calls, and incidents.
+### Phase 3: Run the OS in a Virtual Machine
+1. Open **VirtualBox**, **VMware**, or **QEMU**.
+2. Create a new Linux VM (Debian 64-bit).
+3. Assign **4GB RAM** and at least **2 CPU Cores**.
+4. Attach the generated `.iso` file to the virtual CD/DVD drive and boot up.
+5. The OS will automatically load the Windows 11/macOS hybrid desktop, start the `jarvis-eventbus` in the background, and open a terminal connected directly to the JARVIS Shell. 
+
+---
+
+## Under the Hood Features
+- **Auto-Healing:** The `jarvis-eventbus` continuously monitors `journalctl` and processes. When an anomaly is found (like a volatile cryptominer in `/tmp`), the `DiagnosisEngine` isolates the root cause and generates a repair plan.
+- **Sandboxing (`bwrap`):** All terminal commands generated by the AI are wrapped in Bubblewrap containers, rendering the host filesystem strictly read-only unless the AI holds elevated `admin` privileges.
+- **D-Bus Integration:** External Linux apps can query JARVIS locally by messaging `com.jarvis.Core`.
