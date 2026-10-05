@@ -1,6 +1,6 @@
 import unittest
 
-from jarvis_core.protocol import ToolRequest
+from jarvis_core.protocol import ToolRequest, RiskLevel
 from jarvis_core.tools import build_default_registry
 from jarvis_core import tools
 
@@ -79,6 +79,20 @@ class ToolRegistryTests(unittest.TestCase):
         self.assertEqual(result.status, "ok")
         self.assertIsInstance(result.data["results"], list)
         self.assertIn("test_tools.py", str(result.data["results"]))
+
+
+
+    def test_system_logs(self) -> None:
+        result = build_default_registry().execute(ToolRequest(tool="system.logs", arguments={"lines": 10}))
+        self.assertEqual(result.status, "ok")
+        self.assertIn("logs", result.data)
+
+    def test_security_block_ip(self) -> None:
+        result = build_default_registry().execute(
+            ToolRequest(tool="security.block_ip", arguments={"ip_address": "192.168.1.100"}, max_risk=RiskLevel.HIGH, authorized=True)
+        )
+        self.assertEqual(result.status, "ok")
+        self.assertEqual(result.data["ip_address"], "192.168.1.100")
 
 
 class FakeProcessPath:

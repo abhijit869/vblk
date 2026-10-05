@@ -147,6 +147,25 @@ FILE_SEARCH_PARAMETERS = {
     "additionalProperties": False,
 }
 
+
+SYSTEM_LOGS_PARAMETERS = {
+    "type": "object",
+    "properties": {
+        "service": {"type": "string", "description": "Optional systemd service name to filter logs for (e.g. sshd)."},
+        "lines": {"type": "integer", "description": "Number of lines to return. Default 50."},
+    },
+    "additionalProperties": False,
+}
+
+SECURITY_BLOCK_PARAMETERS = {
+    "type": "object",
+    "required": ["ip_address"],
+    "properties": {
+        "ip_address": {"type": "string", "description": "IP address to block."},
+    },
+    "additionalProperties": False,
+}
+
 TERMINAL_PARAMETERS = {
     "type": "object",
     "properties": {
@@ -221,6 +240,15 @@ def build_default_registry() -> ToolRegistry:
     registry.register(
         ToolDefinition("file.search", 1, RiskLevel.READ, False, 5000, 65536, "Search for files by glob pattern recursively", FILE_SEARCH_PARAMETERS),
         file_search,
+    )
+    
+    registry.register(
+        ToolDefinition("system.logs", 1, RiskLevel.READ, False, 5000, 131072, "Read system logs using journalctl", SYSTEM_LOGS_PARAMETERS),
+        system_logs,
+    )
+    registry.register(
+        ToolDefinition("security.block_ip", 1, RiskLevel.HIGH, True, 5000, 8192, "Block a malicious IP address defensively", SECURITY_BLOCK_PARAMETERS),
+        security_block_ip,
     )
     return registry
 
@@ -437,6 +465,33 @@ def file_search(request: ToolRequest) -> dict[str, Any]:
         return {"path": str(path), "pattern": pattern, "error": str(e)}
         
     return {"path": str(path), "pattern": pattern, "results": results}
+
+
+def system_logs(request: ToolRequest) -> dict[str, Any]:
+    lines = int(request.arguments.get("lines", 50))
+    service = request.arguments.get("service")
+    
+    command = ["journalctl", "--no-pager", "-n", str(min(lines, 1000))]
+    if service:
+        command.extend(["-u", service])
+        
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, timeout=5, check=False)
+        return {"logs": completed.stdout, "service": service, "exit_code": completed.returncode}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def security_block_ip(request: ToolRequest) -> dict[str, Any]:
+    ip_address = request.arguments["ip_address"]
+    # Defensive action: uses iptables to drop malicious traffic.
+    # Requires elevated permissions (RiskLevel.HIGH)
+    command = ["iptables", "-A", "INPUT", "-s", ip_address, "-j", "DROP"]
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, timeout=3, check=False)
+        return {"ip_address": ip_address, "action": "blocked", "success": completed.returncode == 0, "stderr": completed.stderr}
+    except Exception as e:
+        return {"error": str(e)}
 
 def _read_meminfo() -> dict[str, int]:
     values: dict[str, int] = {}
