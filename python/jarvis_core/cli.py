@@ -12,7 +12,7 @@ from jarvis_core.core import JarvisCore
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the JARVIS v0.1 control loop")
-    parser.add_argument("request", nargs="+", help="Natural-language request")
+    parser.add_argument("request", nargs="+", help="Natural-language request or 'daemon'")
     parser.add_argument("--json", action="store_true", help="Print the full structured response and audit trail")
     args = parser.parse_args(argv)
 
@@ -21,8 +21,23 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         print(f"jarvis: configuration error: {exc}", file=sys.stderr)
         return 2
+        
+    core = JarvisCore(ai_gateway=build_ai_gateway(config))
+    
+    if args.request[0] == "daemon":
+        from jarvis_core.dbus_service import start_dbus_service
+        try:
+            start_dbus_service(core)
+            # Run forever
+            import time
+            while True:
+                time.sleep(1)
+        except Exception as e:
+            print(f"Daemon Error: {e}", file=sys.stderr)
+            return 1
 
-    response = JarvisCore(ai_gateway=build_ai_gateway(config)).handle_text(" ".join(args.request))
+    response = core.handle_text(" ".join(args.request))
+
     if args.json:
         print(json.dumps(response, indent=2, default=str))
         return 0
