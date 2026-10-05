@@ -12,6 +12,11 @@ lb config \
     --iso-publisher "JARVIS AI Systems" \
     --iso-volume "JARVIS_OS_1.0" \
     --memtest none \
+    --mirror-bootstrap "http://deb.debian.org/debian/" \
+    --mirror-chroot "http://deb.debian.org/debian/" \
+    --mirror-chroot-security "http://security.debian.org/debian-security/" \
+    --mirror-binary "http://deb.debian.org/debian/" \
+    --mirror-binary-security "http://security.debian.org/debian-security/" \
     --binary-images iso-hybrid \
     --bootappend-live "boot=live components quiet splash mitigations=off" # Disable mitigations for max VM performance
 
