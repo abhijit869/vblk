@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from jarvis_core.ai_gateway import AIGateway, AIProvider, MockAIProvider, OpenAICompatibleProvider
 
 DEFAULT_BASE_URL = "https://api.openai.com/v1"
-CLOUD_PROVIDERS = {"openai", "openai-compatible"}
+CLOUD_PROVIDERS = {"openai", "openai-compatible", "gemini", "antigravity_cli", "antigravity"}
 
 
 @dataclass(frozen=True)
@@ -58,19 +58,16 @@ def load_ai_config(env: Mapping[str, str] | None = None) -> AIConfig:
 
 def build_ai_gateway(config: AIConfig | None = None) -> AIGateway:
     config = config or load_ai_config()
-    if config.provider == "mock":
+    if config.provider == "gemini":
+        from jarvis_core.ai_gateway import GeminiProvider
+        primary = GeminiProvider(api_key=config.api_key or os.environ.get("GEMINI_API_KEY", ""))
+        return AIGateway(primary)
+    elif config.provider == "antigravity":
+        from jarvis_core.ai_gateway import AntigravityCLIProvider
+        primary = AntigravityCLIProvider()
+        return AIGateway(primary)
+    elif config.provider == "mock":
         return AIGateway(MockAIProvider())
-
-    primary: AIProvider = OpenAICompatibleProvider(
-        model=config.model,
-        api_key=config.api_key,
-        base_url=config.base_url,
-        timeout_ms=config.timeout_ms,
-        name=config.provider,
-    )
-    fallback = MockAIProvider() if config.fallback == "mock" else None
-    return AIGateway(primary, fallback=fallback, max_retries=config.max_retries)
-
 
 def _int(env: Mapping[str, str], key: str, default: int) -> int:
     value = env.get(key)

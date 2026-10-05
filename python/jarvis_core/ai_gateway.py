@@ -569,3 +569,155 @@ class AIGateway:
             fallback_from=self._primary.name,
             error=reason,
         )
+
+
+
+class GeminiProvider(AIProvider):
+    """Gemini REST API Provider for JARVIS Core Brain."""
+
+    def __init__(self, api_key: str, model: str = "gemini-1.5-flash", timeout_ms: int = 30000) -> None:
+        self.api_key = api_key
+        self._model = model
+        self._timeout_ms = timeout_ms
+
+    @property
+    def name(self) -> str:
+        return "gemini"
+
+    def health(self) -> ProviderHealth:
+        if not self.api_key:
+            return ProviderHealth(provider=self.name, status=ProviderStatus.UNAVAILABLE, message="GEMINI_API_KEY missing")
+        return ProviderHealth(provider=self.name, status=ProviderStatus.HEALTHY)
+
+    def complete(self, request: AIRequest) -> AIResponse:
+        return self._call_gemini(request, [])
+
+    def respond(self, request: AIRequest, outputs: Sequence[AIToolOutput]) -> AIResponse:
+        return self._call_gemini(request, outputs)
+        
+    def _call_gemini(self, request: AIRequest, outputs: Sequence[AIToolOutput]) -> AIResponse:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{request.model or self._model}:generateContent?key={self.api_key}"
+        
+        # Build contents
+        contents = []
+        if request.system_prompt:
+            # Gemini typically handles system instructions differently, but we can pass it as a user turn or in system_instruction
+            pass # We'll put it in system_instruction
+            
+        parts = [{"text": request.prompt}]
+        contents.append({"role": "user", "parts": parts})
+        
+        if outputs:
+            # Add a model response to simulate the previous turn's tool call
+            # This is a simplified mock for the protocol
+            contents.append({
+                "role": "model",
+                "parts": [{"text": "Executing tools..."}]
+            })
+            tool_parts = []
+            for out in outputs:
+                tool_parts.append({"text": f"Tool {out.call.tool} returned:\n{out.content}"})
+            contents.append({"role": "user", "parts": tool_parts})
+            
+        # Gemini tools format
+        tools = []
+        if request.tools:
+            function_declarations = []
+            for t in request.tools:
+                function_declarations.append({
+                    "name": t.name.replace(".", "_"),
+                    "description": t.description,
+                    "parameters": t.parameters
+                })
+            tools.append({"functionDeclarations": function_declarations})
+
+        body = {
+            "contents": contents,
+        }
+        if request.system_prompt:
+            body["systemInstruction"] = {"parts": [{"text": request.system_prompt}]}
+        if tools:
+            body["tools"] = tools
+
+        headers = {"Content-Type": "application/json"}
+        http_request = urllib.request.Request(
+            url,
+            data=json.dumps(body).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        
+        timeout_s = min(request.timeout_ms or self._timeout_ms, self._timeout_ms) / 1000
+        
+        try:
+            with urllib.request.urlopen(http_request, timeout=timeout_s) as response:
+                payload = json.loads(response.read())
+        except urllib.error.HTTPError as exc:
+            raise ProviderError(f"Gemini API Error: {exc.code} {exc.reason}", retryable=True) from None
+            
+        # Parse Gemini response
+        content = ""
+        tool_calls = []
+        
+        try:
+            candidates = payload.get("candidates", [])
+            if candidates:
+                parts = candidates[0].get("content", {}).get("parts", [])
+                for part in parts:
+                    if "text" in part:
+                        content += part["text"]
+                    if "functionCall" in part:
+                        fc = part["functionCall"]
+                        tool_calls.append(AIToolCall(
+                            tool=fc["name"].replace("_", "."),
+                            arguments=fc.get("args", {}),
+                            id=f"call_{uuid4().hex[:8]}"
+                        ))
+        except Exception:
+            pass
+
+        return AIResponse(
+            request_id=request.request_id,
+            provider=self.name,
+            model=self._model,
+            content=content,
+            tool_calls=tool_calls
+        )
+
+class AntigravityCLIProvider(AIProvider):
+    """Uses the local 'agy' CLI binary as the AI Core Brain."""
+
+    def __init__(self, timeout_ms: int = 60000) -> None:
+        self._timeout_ms = timeout_ms
+
+    @property
+    def name(self) -> str:
+        return "antigravity_cli"
+
+    def health(self) -> ProviderHealth:
+        import shutil
+        if shutil.which("agy"):
+            return ProviderHealth(provider=self.name, status=ProviderStatus.HEALTHY)
+        return ProviderHealth(provider=self.name, status=ProviderStatus.UNAVAILABLE, message="'agy' CLI not found")
+
+    def complete(self, request: AIRequest) -> AIResponse:
+        import subprocess
+        # Simply shell out to agy for the response
+        cmd = ["agy", "--print", request.prompt]
+        if request.system_prompt:
+            cmd[-1] = request.system_prompt + "\n\n" + cmd[-1]
+            
+        try:
+            completed = subprocess.run(cmd, capture_output=True, text=True, timeout=self._timeout_ms / 1000)
+            return AIResponse(
+                request_id=request.request_id,
+                provider=self.name,
+                model="agy-default",
+                content=completed.stdout.strip(),
+                tool_calls=[] # Relying on agy's internal tools
+            )
+        except Exception as e:
+            raise ProviderError(f"Antigravity CLI failed: {e}")
+
+    def respond(self, request: AIRequest, outputs: Sequence[AIToolOutput]) -> AIResponse:
+        return self.complete(request)
