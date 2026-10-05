@@ -16,3 +16,13 @@ xdotool
 scrot
 iptables
 zram-tools
+tor
+openssh-server
+apparmor
+apparmor-utils
+ufw
+macchanger
+cryptsetup
+fail2ban
+rkhunter
+chkrootkit
