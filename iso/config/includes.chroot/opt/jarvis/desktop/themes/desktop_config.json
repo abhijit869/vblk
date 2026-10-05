@@ -1,0 +1,13 @@
+{
+  "desktop_environment": "JARVIS AI Shell",
+  "dock_position": "bottom-center",
+  "global_menu": true,
+  "window_controls": "left",
+  "corner_radius": 12,
+  "blur_effects": true,
+  "ai_integration": {
+    "file_explorer": true,
+    "navigation": true,
+    "assistant_shortcut": "Super+Space"
+  }
+}

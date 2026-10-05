@@ -1,0 +1,23 @@
+[Unit]
+Description=JARVIS OS Core API and Control Layer
+After=network.target
+
+[Service]
+Type=simple
+User=jarvis
+Group=jarvis
+ExecStart=/opt/jarvis/bin/python3 -m jarvis_core.cli daemon
+Environment="JARVIS_AI_PROVIDER=openai-compatible"
+Environment="JARVIS_AI_MODEL=local-1B-emergency"
+Restart=on-failure
+RestartSec=5s
+
+# Security Hardening for the daemon itself
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_SYS_ADMIN
+ProtectSystem=strict
+ReadWritePaths=/var/log/jarvis /var/lib/jarvis
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+#!/bin/sh
+# 1. Enable services
+systemctl enable jarvis-core.service
+systemctl enable jarvis-eventbus.service
+systemctl enable zramswap.service
+
+# 2. Setup Jarvis user and GUI autologin
+useradd -m -s /bin/bash jarvis
+chown -R jarvis:jarvis /opt/jarvis
+
+# 3. Precompile Python to bytecode for faster startup and lower RAM usage
+python3 -m compileall /opt/jarvis/python/jarvis_core
+
+# 4. Limit malloc arenas for JARVIS daemon to reduce memory fragmentation footprint
+sed -i 's/Environment="JARVIS_AI_PROVIDER/Environment="MALLOC_ARENA_MAX=2"\nEnvironment="JARVIS_AI_PROVIDER/g' /etc/systemd/system/jarvis-core.service

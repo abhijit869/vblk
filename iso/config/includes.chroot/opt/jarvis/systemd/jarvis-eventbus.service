@@ -1,0 +1,21 @@
+[Unit]
+Description=JARVIS OS Event Bus & Security Monitoring
+Requires=jarvis-core.service
+After=jarvis-core.service
+
+[Service]
+Type=simple
+User=jarvis
+Group=jarvis
+ExecStart=/opt/jarvis/bin/python3 -m jarvis_core.cli eventbus-daemon
+Restart=always
+RestartSec=3s
+
+# Requires access to monitor processes and logs
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_SYS_PTRACE
+ProtectSystem=full
+ReadOnlyPaths=/var/log
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
