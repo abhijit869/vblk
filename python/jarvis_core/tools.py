@@ -166,6 +166,27 @@ SECURITY_BLOCK_PARAMETERS = {
     "additionalProperties": False,
 }
 
+
+GUI_CLICK_PARAMETERS = {
+    "type": "object",
+    "required": ["x", "y"],
+    "properties": {
+        "x": {"type": "integer"},
+        "y": {"type": "integer"},
+        "button": {"type": "integer", "description": "1 for left, 2 for middle, 3 for right. Default 1."},
+    },
+    "additionalProperties": False,
+}
+
+GUI_TYPE_PARAMETERS = {
+    "type": "object",
+    "required": ["text"],
+    "properties": {
+        "text": {"type": "string", "description": "Text to type into the active window."},
+    },
+    "additionalProperties": False,
+}
+
 TERMINAL_PARAMETERS = {
     "type": "object",
     "properties": {
@@ -249,6 +270,23 @@ def build_default_registry() -> ToolRegistry:
     registry.register(
         ToolDefinition("security.block_ip", 1, RiskLevel.HIGH, True, 5000, 8192, "Block a malicious IP address defensively", SECURITY_BLOCK_PARAMETERS),
         security_block_ip,
+    )
+    
+    registry.register(
+        ToolDefinition("gui.window_list", 1, RiskLevel.READ, False, 2000, 32768, "List active GUI windows and metadata"),
+        gui_window_list,
+    )
+    registry.register(
+        ToolDefinition("gui.screenshot", 1, RiskLevel.READ, False, 5000, 4096, "Take a screenshot and return the path"),
+        gui_screenshot,
+    )
+    registry.register(
+        ToolDefinition("gui.click", 1, RiskLevel.MEDIUM, True, 2000, 4096, "Move mouse and click coordinates", GUI_CLICK_PARAMETERS),
+        gui_click,
+    )
+    registry.register(
+        ToolDefinition("gui.type", 1, RiskLevel.MEDIUM, True, 10000, 4096, "Type text into the focused window", GUI_TYPE_PARAMETERS),
+        gui_type,
     )
     return registry
 
@@ -490,6 +528,61 @@ def security_block_ip(request: ToolRequest) -> dict[str, Any]:
     try:
         completed = subprocess.run(command, capture_output=True, text=True, timeout=3, check=False)
         return {"ip_address": ip_address, "action": "blocked", "success": completed.returncode == 0, "stderr": completed.stderr}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def gui_window_list(_: ToolRequest) -> list[dict[str, Any]]:
+    # Uses wmctrl to list windows
+    try:
+        completed = subprocess.run(["wmctrl", "-l", "-p", "-x"], capture_output=True, text=True, timeout=2, check=False)
+        if completed.returncode != 0:
+            return [{"error": "wmctrl failed or X11 not available", "stderr": completed.stderr}]
+            
+        windows = []
+        for line in completed.stdout.splitlines():
+            parts = line.split(None, 6)
+            if len(parts) >= 6:
+                windows.append({
+                    "window_id": parts[0],
+                    "desktop": parts[1],
+                    "pid": parts[2],
+                    "class": parts[3],
+                    "host": parts[4],
+                    "title": parts[5] if len(parts) > 5 else "",
+                })
+        return windows
+    except Exception as e:
+        return [{"error": str(e)}]
+
+def gui_screenshot(_: ToolRequest) -> dict[str, Any]:
+    # Capture screen using scrot or import
+    path = "/tmp/jarvis_screenshot.png"
+    try:
+        completed = subprocess.run(["scrot", path, "-o"], capture_output=True, text=True, timeout=5, check=False)
+        if completed.returncode == 0:
+            return {"status": "success", "file": path}
+        return {"status": "error", "stderr": completed.stderr}
+    except Exception as e:
+        return {"error": str(e)}
+
+def gui_click(request: ToolRequest) -> dict[str, Any]:
+    x = request.arguments["x"]
+    y = request.arguments["y"]
+    button = request.arguments.get("button", 1)
+    
+    try:
+        completed = subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", str(button)], capture_output=True, text=True, timeout=2, check=False)
+        return {"success": completed.returncode == 0, "stderr": completed.stderr}
+    except Exception as e:
+        return {"error": str(e)}
+
+def gui_type(request: ToolRequest) -> dict[str, Any]:
+    text = request.arguments["text"]
+    try:
+        # We use --clearmodifiers and --delay to ensure typing is robust
+        completed = subprocess.run(["xdotool", "type", "--clearmodifiers", "--delay", "50", text], capture_output=True, text=True, timeout=10, check=False)
+        return {"success": completed.returncode == 0, "stderr": completed.stderr}
     except Exception as e:
         return {"error": str(e)}
 

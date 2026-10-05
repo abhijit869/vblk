@@ -95,6 +95,28 @@ class ToolRegistryTests(unittest.TestCase):
         self.assertEqual(result.data["ip_address"], "192.168.1.100")
 
 
+
+    def test_gui_window_list(self) -> None:
+        result = build_default_registry().execute(ToolRequest(tool="gui.window_list"))
+        self.assertEqual(result.status, "ok")
+
+    def test_gui_screenshot(self) -> None:
+        result = build_default_registry().execute(ToolRequest(tool="gui.screenshot"))
+        self.assertEqual(result.status, "ok")
+
+    def test_gui_click(self) -> None:
+        result = build_default_registry().execute(
+            ToolRequest(tool="gui.click", arguments={"x": 100, "y": 200}, max_risk=RiskLevel.MEDIUM, authorized=True)
+        )
+        self.assertEqual(result.status, "ok")
+
+    def test_gui_type(self) -> None:
+        result = build_default_registry().execute(
+            ToolRequest(tool="gui.type", arguments={"text": "hello"}, max_risk=RiskLevel.MEDIUM, authorized=True)
+        )
+        self.assertEqual(result.status, "ok")
+
+
 class FakeProcessPath:
     def __init__(self, cmdline: bytes) -> None:
         self._cmdline = cmdline
