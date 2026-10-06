@@ -1,5 +1,7 @@
 # JARVIS OS
 
+### 💿 **[Download the JARVIS OS 1.0 ISO Here!](https://github.com/abhijit869/vblk/releases/latest)**
+
 ![JARVIS OS MacTahoe Theme](desktop/themes/wallpapers/mactahoe_dark_wallpaper.jpg)
 
 **JARVIS OS** is a fundamentally new type of Linux distribution. Instead of merely placing an AI chat application on top of an operating system, JARVIS integrates a Large Language Model (LLM) as a core system daemon. Built on the rock-solid foundation of **Debian 13 (Bookworm)**, it seamlessly combines a continuous Background Event Bus, an automated Diagnostics Engine, strict Bubblewrap-based sandboxing, and a beautiful MacTahoe (macOS Big Sur style) UI—all engineered to run exceptionally well on low-spec 4GB Virtual Machines.
