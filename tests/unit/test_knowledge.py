@@ -1,5 +1,7 @@
 import unittest
+
 from jarvis_core.knowledge import generate_system_snapshot
+
 
 class KnowledgeTests(unittest.TestCase):
     def test_snapshot_generation(self) -> None:
@@ -10,6 +12,7 @@ class KnowledgeTests(unittest.TestCase):
         self.assertIn("network", snapshot)
         self.assertIn("top_processes", snapshot)
         self.assertEqual(snapshot["os"]["system"], "Linux")
+
 
 if __name__ == "__main__":
     unittest.main()

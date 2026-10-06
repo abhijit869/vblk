@@ -6,9 +6,8 @@ Ensures AI-executed tools cannot permanently damage the host filesystem unless e
 
 from __future__ import annotations
 
-import subprocess
 import shutil
-from typing import Any
+
 
 class SandboxEngine:
     def __init__(self, require_bwrap: bool = False):

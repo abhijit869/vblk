@@ -401,7 +401,7 @@ class OpenAICompatibleProvider:
         )
         timeout_s = min(timeout_ms, self._timeout_ms) / 1000
         try:
-            with urllib.request.urlopen(http_request, timeout=timeout_s) as response:  # noqa: S310 - URL is config
+            with urllib.request.urlopen(http_request, timeout=timeout_s) as response:
                 raw = response.read()
         except urllib.error.HTTPError as exc:
             detail, _ = redact_text(exc.read().decode("utf-8", errors="replace")[:300])

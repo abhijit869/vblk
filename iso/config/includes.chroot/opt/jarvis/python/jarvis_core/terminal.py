@@ -12,7 +12,6 @@ from time import monotonic
 from jarvis_core.protocol import RiskLevel
 from jarvis_core.redaction import redact_text
 
-
 READ_ONLY_COMMANDS = {
     "cat",
     "date",

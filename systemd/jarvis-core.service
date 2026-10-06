@@ -6,7 +6,8 @@ After=network.target
 Type=simple
 User=jarvis
 Group=jarvis
-ExecStart=/opt/jarvis/bin/python3 -m jarvis_core.cli daemon
+ExecStart=/usr/bin/python3 -m jarvis_core.cli daemon
+Environment="PYTHONPATH=/opt/jarvis/python"
 Environment="JARVIS_AI_PROVIDER=openai-compatible"
 Environment="JARVIS_AI_MODEL=local-1B-emergency"
 Restart=on-failure

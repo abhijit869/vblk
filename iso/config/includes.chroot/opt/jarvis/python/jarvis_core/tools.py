@@ -12,7 +12,14 @@ from shutil import disk_usage
 from typing import Any
 
 from jarvis_core.policy import PolicyEngine
-from jarvis_core.protocol import RiskLevel, Timer, ToolDefinition, ToolError, ToolRequest, ToolResult
+from jarvis_core.protocol import (
+    RiskLevel,
+    Timer,
+    ToolDefinition,
+    ToolError,
+    ToolRequest,
+    ToolResult,
+)
 from jarvis_core.redaction import redact_data, redact_text
 from jarvis_core.terminal import TerminalEngine
 

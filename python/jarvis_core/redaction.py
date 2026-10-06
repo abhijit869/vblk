@@ -9,7 +9,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-
 SECRET_NAME = r"[\w.-]*(?:api[_-]?key|access[_-]?key|token|passw(?:or)?d|passwd|secret|credential|private[_-]?key|cookie)[\w.-]*"
 
 SECRET_NAME_RE = re.compile(rf"(?i)^{SECRET_NAME}$")
@@ -23,18 +22,28 @@ SECRET_PATTERNS = [
     # Credentials embedded in URLs: scheme://user:password@host
     re.compile(r"(?i)([a-z][a-z0-9+.-]*://[^/\s:@]+)(:)([^@\s/]+)(?=@)"),
     # PEM private keys / PGP private key blocks
-    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.DOTALL),
-    re.compile(r"-----BEGIN PGP PRIVATE KEY BLOCK-----.*?-----END PGP PRIVATE KEY BLOCK-----", re.DOTALL),
+    re.compile(
+        r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----",
+        re.DOTALL,
+    ),
+    re.compile(
+        r"-----BEGIN PGP PRIVATE KEY BLOCK-----.*?-----END PGP PRIVATE KEY BLOCK-----",
+        re.DOTALL,
+    ),
     # Well-known token formats
-    re.compile(r"\bsk-(?:proj-|ant-|live-|test-)?[A-Za-z0-9_\-]{16,}"),   # OpenAI / Anthropic / Stripe
-    re.compile(r"\bAIza[0-9A-Za-z_\-]{30,}"),                             # Google API key
-    re.compile(r"\bya29\.[0-9A-Za-z_\-]{20,}"),                           # Google OAuth token
+    re.compile(
+        r"\bsk-(?:proj-|ant-|live-|test-)?[A-Za-z0-9_\-]{16,}"
+    ),  # OpenAI / Anthropic / Stripe
+    re.compile(r"\bAIza[0-9A-Za-z_\-]{30,}"),  # Google API key
+    re.compile(r"\bya29\.[0-9A-Za-z_\-]{20,}"),  # Google OAuth token
     re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr|github_pat)_[A-Za-z0-9_]{20,}"),  # GitHub
-    re.compile(r"\bglpat-[A-Za-z0-9_\-]{20,}"),                           # GitLab
-    re.compile(r"\bxox[abposr]-[A-Za-z0-9\-]{10,}"),                      # Slack
-    re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"),                         # AWS access key id
-    re.compile(r"\bhf_[A-Za-z0-9]{30,}"),                                 # Hugging Face
-    re.compile(r"\beyJ[A-Za-z0-9_\-]{8,}\.eyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}"),  # JWT
+    re.compile(r"\bglpat-[A-Za-z0-9_\-]{20,}"),  # GitLab
+    re.compile(r"\bxox[abposr]-[A-Za-z0-9\-]{10,}"),  # Slack
+    re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"),  # AWS access key id
+    re.compile(r"\bhf_[A-Za-z0-9]{30,}"),  # Hugging Face
+    re.compile(
+        r"\beyJ[A-Za-z0-9_\-]{8,}\.eyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}"
+    ),  # JWT
     # Unix password hashes (shadow format: $id$salt$hash)
     re.compile(r"\$(?:1|2[abxy]?|5|6|y|gy|7)\$[^\s:$]{1,64}\$[^\s:]{8,}"),
 ]
@@ -59,7 +68,12 @@ def redact_data(value: Any) -> tuple[Any, bool]:
         changed = False
         result: dict[Any, Any] = {}
         for key, item in value.items():
-            if isinstance(key, str) and SECRET_NAME_RE.match(key) and isinstance(item, str) and item:
+            if (
+                isinstance(key, str)
+                and SECRET_NAME_RE.match(key)
+                and isinstance(item, str)
+                and item
+            ):
                 result[key] = REDACTED
                 changed = True
                 continue

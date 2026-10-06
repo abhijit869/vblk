@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-
 SECRET_NAME = r"[\w.-]*(?:api[_-]?key|access[_-]?key|token|passw(?:or)?d|secret|credential)[\w.-]*"
 
 SECRET_NAME_RE = re.compile(rf"(?i)^{SECRET_NAME}$")

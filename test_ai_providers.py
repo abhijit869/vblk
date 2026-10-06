@@ -1,7 +1,7 @@
 import os
-import sys
-from jarvis_core.config import build_ai_gateway, AIConfig
+
 from jarvis_core.ai_gateway import AIRequest
+from jarvis_core.config import AIConfig, build_ai_gateway
 
 providers = ["antigravity", "gemini", "openai"]
 print("Testing JARVIS Core Brain Providers...\n")

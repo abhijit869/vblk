@@ -6,7 +6,6 @@ import json
 import sqlite3
 import uuid
 from pathlib import Path
-from typing import Any
 
 from jarvis_core.protocol import ToolRequest, ToolResult
 
@@ -18,7 +17,7 @@ class SQLiteMemoryEngine:
             path = Path(self.db_path)
             path.parent.mkdir(parents=True, exist_ok=True)
             self.db_path = str(path.absolute())
-            
+
         self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self._init_db()
 
@@ -41,7 +40,7 @@ class SQLiteMemoryEngine:
                 FOREIGN KEY(session_id) REFERENCES sessions(session_id)
             )
         """)
-        
+
         self._conn.execute("""
             CREATE TABLE IF NOT EXISTS interactions (
                 interaction_id TEXT PRIMARY KEY,
@@ -57,11 +56,15 @@ class SQLiteMemoryEngine:
 
     def create_session(self) -> str:
         session_id = str(uuid.uuid4())
-        self._conn.execute("INSERT INTO sessions (session_id) VALUES (?)", (session_id,))
+        self._conn.execute(
+            "INSERT INTO sessions (session_id) VALUES (?)", (session_id,)
+        )
         self._conn.commit()
         return session_id
 
-    def record_tool_call(self, session_id: str, request: ToolRequest, result: ToolResult) -> str:
+    def record_tool_call(
+        self, session_id: str, request: ToolRequest, result: ToolResult
+    ) -> str:
         call_id = str(uuid.uuid4())
         self._conn.execute(
             """
@@ -80,15 +83,16 @@ class SQLiteMemoryEngine:
         self._conn.commit()
         return call_id
 
-
-    def record_interaction(self, session_id: str, user_input: str, ai_response: str) -> str:
+    def record_interaction(
+        self, session_id: str, user_input: str, ai_response: str
+    ) -> str:
         interaction_id = str(uuid.uuid4())
         self._conn.execute(
             """
             INSERT INTO interactions (interaction_id, session_id, user_input, ai_response)
             VALUES (?, ?, ?, ?)
             """,
-            (interaction_id, session_id, user_input, ai_response)
+            (interaction_id, session_id, user_input, ai_response),
         )
         self._conn.commit()
         return interaction_id

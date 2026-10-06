@@ -23,7 +23,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
 
-from jarvis_core.pathguard import SENSITIVE_PATH_PATTERNS, is_sensitive_path, touches_sensitive_path
+from jarvis_core.pathguard import (
+    SENSITIVE_PATH_PATTERNS,
+    is_sensitive_path,
+    touches_sensitive_path,
+)
 from jarvis_core.permissions import PermissionEngine
 from jarvis_core.protocol import RiskLevel
 from jarvis_core.redaction import redact_text
@@ -85,21 +89,117 @@ HIGH_COMMANDS = {
 # network channels.
 FORBIDDEN_COMMANDS = {
     # privilege escalation
-    "sudo", "su", "doas", "pkexec", "run0", "runuser", "setpriv", "capsh", "chroot", "nsenter", "unshare",
+    "sudo",
+    "su",
+    "doas",
+    "pkexec",
+    "run0",
+    "runuser",
+    "setpriv",
+    "capsh",
+    "chroot",
+    "nsenter",
+    "unshare",
     # shells & interpreters
-    "sh", "bash", "dash", "zsh", "ksh", "csh", "tcsh", "fish", "busybox", "toybox",
-    "python", "python2", "python3", "perl", "ruby", "node", "nodejs", "deno", "bun", "php", "lua", "tclsh",
-    "awk", "gawk", "mawk", "nawk", "sed", "vim", "vi", "nvim", "emacs", "ed", "less", "more", "man",
+    "sh",
+    "bash",
+    "dash",
+    "zsh",
+    "ksh",
+    "csh",
+    "tcsh",
+    "fish",
+    "busybox",
+    "toybox",
+    "python",
+    "python2",
+    "python3",
+    "perl",
+    "ruby",
+    "node",
+    "nodejs",
+    "deno",
+    "bun",
+    "php",
+    "lua",
+    "tclsh",
+    "awk",
+    "gawk",
+    "mawk",
+    "nawk",
+    "sed",
+    "vim",
+    "vi",
+    "nvim",
+    "emacs",
+    "ed",
+    "less",
+    "more",
+    "man",
     # command wrappers
-    "env", "xargs", "find", "nohup", "timeout", "nice", "ionice", "setsid", "stdbuf", "time", "watch",
-    "strace", "ltrace", "gdb", "script", "expect", "parallel", "flock", "taskset", "chrt",
+    "env",
+    "xargs",
+    "find",
+    "nohup",
+    "timeout",
+    "nice",
+    "ionice",
+    "setsid",
+    "stdbuf",
+    "time",
+    "watch",
+    "strace",
+    "ltrace",
+    "gdb",
+    "script",
+    "expect",
+    "parallel",
+    "flock",
+    "taskset",
+    "chrt",
     # network & exfiltration
-    "curl", "wget", "nc", "ncat", "netcat", "socat", "telnet", "ssh", "scp", "sftp", "rsync", "ftp",
-    "tftp", "openssl", "nmap",
+    "curl",
+    "wget",
+    "nc",
+    "ncat",
+    "netcat",
+    "socat",
+    "telnet",
+    "ssh",
+    "scp",
+    "sftp",
+    "rsync",
+    "ftp",
+    "tftp",
+    "openssl",
+    "nmap",
     # persistence / system modification
-    "crontab", "at", "batch", "systemd-run", "insmod", "rmmod", "modprobe", "kexec", "iptables",
-    "nft", "ufw", "useradd", "usermod", "userdel", "passwd", "chpasswd", "visudo", "tee", "cp",
-    "install", "ln", "dpkg", "make", "gcc", "cc", "git",
+    "crontab",
+    "at",
+    "batch",
+    "systemd-run",
+    "insmod",
+    "rmmod",
+    "modprobe",
+    "kexec",
+    "iptables",
+    "nft",
+    "ufw",
+    "useradd",
+    "usermod",
+    "userdel",
+    "passwd",
+    "chpasswd",
+    "visudo",
+    "tee",
+    "cp",
+    "install",
+    "ln",
+    "dpkg",
+    "make",
+    "gcc",
+    "cc",
+    "git",
 }
 
 # Read-only commands whose output is file contents.
@@ -110,18 +210,57 @@ DANGEROUS_FLAGS: dict[str, tuple[tuple[str, RiskLevel], ...]] = {
     "du": (("--files0-from", RiskLevel.HIGH),),
     "wc": (("--files0-from", RiskLevel.HIGH),),
     "journalctl": (
-        ("--vacuum", RiskLevel.MEDIUM), ("--rotate", RiskLevel.MEDIUM), ("--flush", RiskLevel.MEDIUM),
-        ("--sync", RiskLevel.MEDIUM), ("--relinquish", RiskLevel.MEDIUM), ("--setup-keys", RiskLevel.HIGH),
+        ("--vacuum", RiskLevel.MEDIUM),
+        ("--rotate", RiskLevel.MEDIUM),
+        ("--flush", RiskLevel.MEDIUM),
+        ("--sync", RiskLevel.MEDIUM),
+        ("--relinquish", RiskLevel.MEDIUM),
+        ("--setup-keys", RiskLevel.HIGH),
         ("--update-catalog", RiskLevel.MEDIUM),
     ),
     "date": (("-s", RiskLevel.MEDIUM), ("--set", RiskLevel.MEDIUM)),
-    "ps": (("e", RiskLevel.HIGH),),  # BSD-style 'e' prints process environments (may contain secrets)
+    "ps": (
+        ("e", RiskLevel.HIGH),
+    ),  # BSD-style 'e' prints process environments (may contain secrets)
 }
 
-APT_READ_ONLY = {"list", "show", "search", "policy", "depends", "rdepends", "changelog", "madison"}
-APT_HIGH = {"install", "remove", "purge", "autoremove", "full-upgrade", "dist-upgrade", "reinstall", "build-dep", "source", "download"}
+APT_READ_ONLY = {
+    "list",
+    "show",
+    "search",
+    "policy",
+    "depends",
+    "rdepends",
+    "changelog",
+    "madison",
+}
+APT_HIGH = {
+    "install",
+    "remove",
+    "purge",
+    "autoremove",
+    "full-upgrade",
+    "dist-upgrade",
+    "reinstall",
+    "build-dep",
+    "source",
+    "download",
+}
 
-IP_READ_ONLY_OBJECTS = {"a", "addr", "address", "l", "link", "r", "route", "n", "neigh", "neighbour", "rule", "maddr"}
+IP_READ_ONLY_OBJECTS = {
+    "a",
+    "addr",
+    "address",
+    "l",
+    "link",
+    "r",
+    "route",
+    "n",
+    "neigh",
+    "neighbour",
+    "rule",
+    "maddr",
+}
 IP_READ_ONLY_VERBS = {"show", "list", "lst", "ls", "get"}
 
 __all__ = [
@@ -151,7 +290,11 @@ class TerminalResult:
 
 
 class TerminalEngine:
-    def __init__(self, sandbox: SandboxEngine | None = None, permissions: PermissionEngine | None = None) -> None:
+    def __init__(
+        self,
+        sandbox: SandboxEngine | None = None,
+        permissions: PermissionEngine | None = None,
+    ) -> None:
         self._sandbox = sandbox
         self._permissions = permissions
 
@@ -175,14 +318,28 @@ class TerminalEngine:
 
         def deny(reason: str) -> TerminalResult:
             return TerminalResult(
-                command=argv, risk=risk, stdout="", stderr=reason, exit_code=None, signal=None,
-                duration_ms=0, cwd=resolved_cwd, timed_out=False, truncated=False, redacted=False, denied=True,
+                command=argv,
+                risk=risk,
+                stdout="",
+                stderr=reason,
+                exit_code=None,
+                signal=None,
+                duration_ms=0,
+                cwd=resolved_cwd,
+                timed_out=False,
+                truncated=False,
+                redacted=False,
+                denied=True,
             )
 
         if risk >= RiskLevel.CRITICAL:
-            return deny(f"Denied command risk {risk.name}: '{Path(argv[0]).name}' is not an allowed command")
+            return deny(
+                f"Denied command risk {risk.name}: '{Path(argv[0]).name}' is not an allowed command"
+            )
         if risk > max_risk:
-            return deny(f"Denied command risk {risk.name}; max allowed is {max_risk.name}")
+            return deny(
+                f"Denied command risk {risk.name}; max allowed is {max_risk.name}"
+            )
         if not Path(resolved_cwd).is_dir():
             return deny(f"Denied: working directory does not exist: {resolved_cwd}")
         if is_sensitive_path(resolved_cwd):
@@ -190,7 +347,9 @@ class TerminalEngine:
 
         executable = resolve_executable(argv[0])
         if executable is None:
-            return deny(f"Denied: '{argv[0]}' was not found in trusted system directories")
+            return deny(
+                f"Denied: '{argv[0]}' was not found in trusted system directories"
+            )
         exec_argv = [executable, *argv[1:]]
 
         sandboxed = False
@@ -208,9 +367,13 @@ class TerminalEngine:
                 )
                 sandboxed = True
             elif self.sandbox.mode == "required":
-                return deny("Denied: sandbox is required but bubblewrap is not functional on this system")
+                return deny(
+                    "Denied: sandbox is required but bubblewrap is not functional on this system"
+                )
             elif self.sandbox.mode == "auto" and risk > RiskLevel.READ:
-                return deny(f"Denied: {risk.name} commands require a working sandbox (install bubblewrap)")
+                return deny(
+                    f"Denied: {risk.name} commands require a working sandbox (install bubblewrap)"
+                )
         except (SandboxUnavailable, ValueError) as exc:
             return deny(f"Denied: {exc}")
 
@@ -259,7 +422,11 @@ class TerminalEngine:
         )
 
     def _parse_command(self, command: str | list[str]) -> list[str]:
-        argv = shlex.split(command) if isinstance(command, str) else [str(part) for part in command]
+        argv = (
+            shlex.split(command)
+            if isinstance(command, str)
+            else [str(part) for part in command]
+        )
         if not argv:
             raise ValueError("terminal command is empty")
         if any("\x00" in part for part in argv):
@@ -298,7 +465,10 @@ def classify_command(argv: list[str], cwd: str | Path | None = None) -> RiskLeve
         return RiskLevel.CRITICAL
     if executable in FORBIDDEN_COMMANDS:
         return RiskLevel.CRITICAL
-    if executable.startswith(("python", "perl", "ruby", "php", "lua", "mkfs.")) and executable not in HIGH_COMMANDS:
+    if (
+        executable.startswith(("python", "perl", "ruby", "php", "lua", "mkfs."))
+        and executable not in HIGH_COMMANDS
+    ):
         return RiskLevel.HIGH if executable.startswith("mkfs.") else RiskLevel.CRITICAL
 
     if executable in HIGH_COMMANDS:
@@ -334,13 +504,28 @@ def _has_flag(executable: str, args: list[str], flag: str) -> bool:
         # BSD syntax: an argument without a dash containing 'e' (e.g. 'auxe', 'e').
         return any(not a.startswith("-") and "e" in a and a.isalpha() for a in args)
     for arg in args:
-        if arg == flag or arg.startswith(flag + "=") or (flag.startswith("--") and arg.startswith(flag)):
+        if (
+            arg == flag
+            or arg.startswith(flag + "=")
+            or (flag.startswith("--") and arg.startswith(flag))
+        ):
             return True
     return False
 
 
 def _is_read_only_systemctl(argv: list[str]) -> bool:
-    read_only_subcommands = {"list-units", "list-unit-files", "list-timers", "list-sockets", "status", "is-active", "is-enabled", "is-failed", "show", "cat"}
+    read_only_subcommands = {
+        "list-units",
+        "list-unit-files",
+        "list-timers",
+        "list-sockets",
+        "status",
+        "is-active",
+        "is-enabled",
+        "is-failed",
+        "show",
+        "cat",
+    }
     args = [a for a in argv[1:] if not a.startswith("-")]
     return bool(args) and args[0] in read_only_subcommands
 

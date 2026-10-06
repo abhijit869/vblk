@@ -47,7 +47,7 @@ systemctl enable jarvis-eventbus.service
 systemctl enable zramswap.service
 
 # 2. Setup Jarvis user and GUI autologin
-useradd -m -s /bin/bash jarvis
+id -u jarvis &>/dev/null || useradd -m -s /bin/bash jarvis
 chown -R jarvis:jarvis /opt/jarvis
 
 # 3. Precompile Python to bytecode for faster startup and lower RAM usage
@@ -55,6 +55,11 @@ python3 -m compileall /opt/jarvis/python/jarvis_core
 
 # 4. Limit malloc arenas for JARVIS daemon to reduce memory fragmentation footprint
 sed -i 's/Environment="JARVIS_AI_PROVIDER/Environment="MALLOC_ARENA_MAX=2"\nEnvironment="JARVIS_AI_PROVIDER/g' /etc/systemd/system/jarvis-core.service
+
+# 5. Install Desktop Application Icon
+mkdir -p /usr/share/applications
+cp /opt/jarvis/desktop/jarvis-panel.desktop /usr/share/applications/
+chmod 644 /usr/share/applications/jarvis-panel.desktop
 HOOK
 chmod +x config/hooks/normal/01-enable-jarvis.hook.chroot
 

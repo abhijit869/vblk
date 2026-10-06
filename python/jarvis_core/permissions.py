@@ -45,7 +45,13 @@ ROLES: dict[str, Role] = {
         name="guest",
         allowed_risk_level="READ",
         allowed_tools=("system.info", "system.cpu", "system.memory"),
-        blocked_tools=("terminal.execute", "security.block_ip", "file.write", "file.read", "gui.screenshot"),
+        blocked_tools=(
+            "terminal.execute",
+            "security.block_ip",
+            "file.write",
+            "file.read",
+            "gui.screenshot",
+        ),
     ),
     "user": Role(
         name="user",

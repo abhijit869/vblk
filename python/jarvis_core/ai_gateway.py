@@ -51,7 +51,11 @@ class AIToolSpec:
     name: str
     description: str
     parameters: dict[str, Any] = field(
-        default_factory=lambda: {"type": "object", "properties": {}, "additionalProperties": False}
+        default_factory=lambda: {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        }
     )
 
 
@@ -99,7 +103,9 @@ class AIResponse:
 
 
 class ProviderError(Exception):
-    def __init__(self, message: str, retryable: bool = False, retry_after_s: float | None = None) -> None:
+    def __init__(
+        self, message: str, retryable: bool = False, retry_after_s: float | None = None
+    ) -> None:
         super().__init__(message)
         self.retryable = retryable
         self.retry_after_s = retry_after_s
@@ -108,14 +114,13 @@ class ProviderError(Exception):
 class AIProvider(Protocol):
     name: str
 
-    def health(self) -> ProviderHealth:
-        ...
+    def health(self) -> ProviderHealth: ...
 
-    def complete(self, request: AIRequest) -> AIResponse:
-        ...
+    def complete(self, request: AIRequest) -> AIResponse: ...
 
-    def respond(self, request: AIRequest, outputs: Sequence[AIToolOutput]) -> AIResponse:
-        ...
+    def respond(
+        self, request: AIRequest, outputs: Sequence[AIToolOutput]
+    ) -> AIResponse: ...
 
 
 # --------------------------------------------------------------------------- #
@@ -137,7 +142,11 @@ class MockAIProvider:
 
     name = "mock"
 
-    def __init__(self, model: str = "mock-intent-router", status: ProviderStatus = ProviderStatus.HEALTHY) -> None:
+    def __init__(
+        self,
+        model: str = "mock-intent-router",
+        status: ProviderStatus = ProviderStatus.HEALTHY,
+    ) -> None:
         self._model = model
         self._status = status
 
@@ -163,7 +172,9 @@ class MockAIProvider:
             tool_calls=tool_calls,
         )
 
-    def respond(self, request: AIRequest, outputs: Sequence[AIToolOutput]) -> AIResponse:
+    def respond(
+        self, request: AIRequest, outputs: Sequence[AIToolOutput]
+    ) -> AIResponse:
         lines = [_summarize_output(output) for output in outputs]
         return AIResponse(
             request_id=request.request_id,
@@ -174,7 +185,11 @@ class MockAIProvider:
 
     def _select_tool_calls(self, prompt: str) -> list[AIToolCall]:
         normalized = prompt.lower()
-        calls = [AIToolCall(tool) for tool, pattern in INTENT_PATTERNS if pattern.search(normalized)]
+        calls = [
+            AIToolCall(tool)
+            for tool, pattern in INTENT_PATTERNS
+            if pattern.search(normalized)
+        ]
         if calls:
             return calls
         if TERMINAL_PATTERN.search(normalized):
@@ -240,8 +255,13 @@ def _summarize_disk(data: dict[str, Any]) -> str:
 
 
 def _summarize_processes(data: list[dict[str, Any]]) -> str:
-    top = sorted(data, key=lambda process: process.get("vm_rss_kb") or 0, reverse=True)[:5]
-    listed = ", ".join(f"{p['name']} (pid {p['pid']}, {(p.get('vm_rss_kb') or 0) / 1024:.0f} MiB)" for p in top)
+    top = sorted(data, key=lambda process: process.get("vm_rss_kb") or 0, reverse=True)[
+        :5
+    ]
+    listed = ", ".join(
+        f"{p['name']} (pid {p['pid']}, {(p.get('vm_rss_kb') or 0) / 1024:.0f} MiB)"
+        for p in top
+    )
     return f"{len(data)} processes running. Largest by memory: {listed}."
 
 
@@ -313,9 +333,13 @@ class OpenAICompatibleProvider:
 
     def health(self) -> ProviderHealth:
         if not self._model:
-            return ProviderHealth(self.name, ProviderStatus.UNAVAILABLE, "JARVIS_AI_MODEL is not set")
+            return ProviderHealth(
+                self.name, ProviderStatus.UNAVAILABLE, "JARVIS_AI_MODEL is not set"
+            )
         if not self._api_key and not _is_local_url(self._base_url):
-            return ProviderHealth(self.name, ProviderStatus.UNAVAILABLE, "JARVIS_AI_API_KEY is not set")
+            return ProviderHealth(
+                self.name, ProviderStatus.UNAVAILABLE, "JARVIS_AI_API_KEY is not set"
+            )
         return ProviderHealth(self.name, ProviderStatus.HEALTHY)
 
     def complete(self, request: AIRequest) -> AIResponse:
@@ -344,7 +368,9 @@ class OpenAICompatibleProvider:
         payload = self._post("/chat/completions", body, request.timeout_ms)
         message = _first_message(payload)
         tool_calls = [
-            _parse_tool_call(raw, name_map) for raw in message.get("tool_calls") or [] if raw.get("type") == "function"
+            _parse_tool_call(raw, name_map)
+            for raw in message.get("tool_calls") or []
+            if raw.get("type") == "function"
         ]
         return AIResponse(
             request_id=request.request_id,
@@ -355,7 +381,9 @@ class OpenAICompatibleProvider:
             usage=_parse_usage(payload),
         )
 
-    def respond(self, request: AIRequest, outputs: Sequence[AIToolOutput]) -> AIResponse:
+    def respond(
+        self, request: AIRequest, outputs: Sequence[AIToolOutput]
+    ) -> AIResponse:
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": request.system_prompt},
             {"role": "user", "content": request.prompt},
@@ -376,7 +404,8 @@ class OpenAICompatibleProvider:
             },
         ]
         messages.extend(
-            {"role": "tool", "tool_call_id": output.call.id, "content": output.content} for output in outputs
+            {"role": "tool", "tool_call_id": output.call.id, "content": output.content}
+            for output in outputs
         )
         body = {"model": request.model or self._model, "messages": messages}
         payload = self._post("/chat/completions", body, request.timeout_ms)
@@ -401,21 +430,33 @@ class OpenAICompatibleProvider:
         )
         timeout_s = min(timeout_ms, self._timeout_ms) / 1000
         try:
-            with urllib.request.urlopen(http_request, timeout=timeout_s) as response:  # noqa: S310 - URL is config
+            with urllib.request.urlopen(
+                http_request, timeout=timeout_s
+            ) as response:
                 raw = response.read()
         except urllib.error.HTTPError as exc:
             detail, _ = redact_text(exc.read().decode("utf-8", errors="replace")[:300])
             retryable = exc.code == 429 or exc.code >= 500
-            retry_after = _parse_retry_after(exc.headers.get("Retry-After") if exc.headers else None)
-            raise ProviderError(f"HTTP {exc.code}: {detail}", retryable=retryable, retry_after_s=retry_after) from None
+            retry_after = _parse_retry_after(
+                exc.headers.get("Retry-After") if exc.headers else None
+            )
+            raise ProviderError(
+                f"HTTP {exc.code}: {detail}",
+                retryable=retryable,
+                retry_after_s=retry_after,
+            ) from None
         except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
             reason = getattr(exc, "reason", exc)
-            raise ProviderError(f"Connection failed: {reason}", retryable=True) from None
+            raise ProviderError(
+                f"Connection failed: {reason}", retryable=True
+            ) from None
 
         try:
             payload = json.loads(raw)
         except json.JSONDecodeError:
-            raise ProviderError("Provider returned invalid JSON", retryable=True) from None
+            raise ProviderError(
+                "Provider returned invalid JSON", retryable=True
+            ) from None
         if not isinstance(payload, dict):
             raise ProviderError("Provider returned an unexpected payload")
         return payload
@@ -441,7 +482,11 @@ def _parse_tool_call(raw: dict[str, Any], name_map: dict[str, str]) -> AIToolCal
     encoded = str(function.get("name", ""))
     raw_arguments = function.get("arguments") or "{}"
     try:
-        arguments = json.loads(raw_arguments) if isinstance(raw_arguments, str) else dict(raw_arguments)
+        arguments: dict[str, object] = (
+            json.loads(raw_arguments)
+            if isinstance(raw_arguments, str)
+            else dict(raw_arguments)
+        )
     except (json.JSONDecodeError, TypeError, ValueError):
         arguments = {"_invalid_arguments": str(raw_arguments)[:200]}
     if not isinstance(arguments, dict):
@@ -510,10 +555,14 @@ class AIGateway:
     def complete(self, request: AIRequest) -> AIResponse:
         return self._route(request, lambda provider: provider.complete(request))
 
-    def respond(self, request: AIRequest, outputs: Sequence[AIToolOutput]) -> AIResponse:
+    def respond(
+        self, request: AIRequest, outputs: Sequence[AIToolOutput]
+    ) -> AIResponse:
         return self._route(request, lambda provider: provider.respond(request, outputs))
 
-    def _route(self, request: AIRequest, call: Callable[[AIProvider], AIResponse]) -> AIResponse:
+    def _route(
+        self, request: AIRequest, call: Callable[[AIProvider], AIResponse]
+    ) -> AIResponse:
         health = self._primary.health()
         if health.status == ProviderStatus.UNAVAILABLE:
             reason = health.message or "AI provider unavailable"
@@ -524,7 +573,9 @@ class AIGateway:
         except ProviderError as exc:
             return self._use_fallback(request, call, str(exc))
 
-    def _with_retry(self, provider: AIProvider, call: Callable[[AIProvider], AIResponse]) -> AIResponse:
+    def _with_retry(
+        self, provider: AIProvider, call: Callable[[AIProvider], AIResponse]
+    ) -> AIResponse:
         attempt = 0
         while True:
             try:
@@ -532,7 +583,11 @@ class AIGateway:
             except ProviderError as exc:
                 if not exc.retryable or attempt >= self._max_retries:
                     raise
-                delay = exc.retry_after_s if exc.retry_after_s is not None else self._backoff_s * (2**attempt)
+                delay = (
+                    exc.retry_after_s
+                    if exc.retry_after_s is not None
+                    else self._backoff_s * (2**attempt)
+                )
                 self._sleep(min(delay, self._max_backoff_s))
                 attempt += 1
 
@@ -571,54 +626,62 @@ class AIGateway:
         )
 
 
-
 class GeminiProvider(AIProvider):
     """Gemini REST API Provider for JARVIS Core Brain."""
 
-    def __init__(self, api_key: str, model: str = "gemini-3.5-flash", timeout_ms: int = 30000) -> None:
+    name = "gemini"
+
+    def __init__(
+        self, api_key: str, model: str = "gemini-3.5-flash", timeout_ms: int = 30000
+    ) -> None:
         self.api_key = api_key
         self._model = model
         self._timeout_ms = timeout_ms
 
-    @property
-    def name(self) -> str:
-        return "gemini"
-
     def health(self) -> ProviderHealth:
         if not self.api_key:
-            return ProviderHealth(provider=self.name, status=ProviderStatus.UNAVAILABLE, message="GEMINI_API_KEY missing")
+            return ProviderHealth(
+                provider=self.name,
+                status=ProviderStatus.UNAVAILABLE,
+                message="GEMINI_API_KEY missing",
+            )
         return ProviderHealth(provider=self.name, status=ProviderStatus.HEALTHY)
 
     def complete(self, request: AIRequest) -> AIResponse:
         return self._call_gemini(request, [])
 
-    def respond(self, request: AIRequest, outputs: Sequence[AIToolOutput]) -> AIResponse:
+    def respond(
+        self, request: AIRequest, outputs: Sequence[AIToolOutput]
+    ) -> AIResponse:
         return self._call_gemini(request, outputs)
-        
-    def _call_gemini(self, request: AIRequest, outputs: Sequence[AIToolOutput]) -> AIResponse:
+
+    def _call_gemini(
+        self, request: AIRequest, outputs: Sequence[AIToolOutput]
+    ) -> AIResponse:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{request.model or self._model}:generateContent?key={self.api_key}"
-        
+
         # Build contents
         contents = []
         if request.system_prompt:
             # Gemini typically handles system instructions differently, but we can pass it as a user turn or in system_instruction
-            pass # We'll put it in system_instruction
-            
+            pass  # We'll put it in system_instruction
+
         parts = [{"text": request.prompt}]
         contents.append({"role": "user", "parts": parts})
-        
+
         if outputs:
             # Add a model response to simulate the previous turn's tool call
             # This is a simplified mock for the protocol
-            contents.append({
-                "role": "model",
-                "parts": [{"text": "Executing tools..."}]
-            })
+            contents.append(
+                {"role": "model", "parts": [{"text": "Executing tools..."}]}
+            )
             tool_parts = []
             for out in outputs:
-                tool_parts.append({"text": f"Tool {out.call.tool} returned:\n{out.content}"})
+                tool_parts.append(
+                    {"text": f"Tool {out.call.tool} returned:\n{out.content}"}
+                )
             contents.append({"role": "user", "parts": tool_parts})
-            
+
         # Gemini tools format
         tools = []
         if request.tools:
@@ -626,17 +689,18 @@ class GeminiProvider(AIProvider):
             for t in request.tools:
                 # Remove additionalProperties for Gemini
                 params = dict(t.parameters)
-                if "additionalProperties" in params:
-                    del params["additionalProperties"]
-                    
-                function_declarations.append({
-                    "name": t.name.replace(".", "_"),
-                    "description": t.description,
-                    "parameters": params
-                })
+                params.pop("additionalProperties", None)
+
+                function_declarations.append(
+                    {
+                        "name": t.name.replace(".", "_"),
+                        "description": t.description,
+                        "parameters": params,
+                    }
+                )
             tools.append({"functionDeclarations": function_declarations})
 
-        body = {
+        body: dict[str, Any] = {
             "contents": contents,
         }
         if request.system_prompt:
@@ -651,19 +715,22 @@ class GeminiProvider(AIProvider):
             headers=headers,
             method="POST",
         )
-        
+
         timeout_s = min(request.timeout_ms or self._timeout_ms, self._timeout_ms) / 1000
-        
+
         try:
             with urllib.request.urlopen(http_request, timeout=timeout_s) as response:
                 payload = json.loads(response.read())
         except urllib.error.HTTPError as exc:
-            raise ProviderError(f"Gemini API Error: {exc.code} {exc.reason} - {exc.read()}", retryable=True) from None
-            
+            raise ProviderError(
+                f"Gemini API Error: {exc.code} {exc.reason} - {exc.read()}",
+                retryable=True,
+            ) from None
+
         # Parse Gemini response
         content = ""
         tool_calls = []
-        
+
         try:
             candidates = payload.get("candidates", [])
             if candidates:
@@ -673,11 +740,13 @@ class GeminiProvider(AIProvider):
                         content += part["text"]
                     if "functionCall" in part:
                         fc = part["functionCall"]
-                        tool_calls.append(AIToolCall(
-                            tool=fc["name"].replace("_", "."),
-                            arguments=fc.get("args", {}),
-                            id=f"call_{uuid4().hex[:8]}"
-                        ))
+                        tool_calls.append(
+                            AIToolCall(
+                                tool=fc["name"].replace("_", "."),
+                                arguments=fc.get("args", {}),
+                                id=f"call_{uuid4().hex[:8]}",
+                            )
+                        )
         except Exception:
             pass
 
@@ -686,43 +755,52 @@ class GeminiProvider(AIProvider):
             provider=self.name,
             model=self._model,
             content=content,
-            tool_calls=tool_calls
+            tool_calls=tool_calls,
         )
+
 
 class AntigravityCLIProvider(AIProvider):
     """Uses the local 'agy' CLI binary as the AI Core Brain."""
 
+    name = "antigravity_cli"
+
     def __init__(self, timeout_ms: int = 60000) -> None:
         self._timeout_ms = timeout_ms
 
-    @property
-    def name(self) -> str:
-        return "antigravity_cli"
-
     def health(self) -> ProviderHealth:
         import shutil
+
         if shutil.which("agy"):
             return ProviderHealth(provider=self.name, status=ProviderStatus.HEALTHY)
-        return ProviderHealth(provider=self.name, status=ProviderStatus.UNAVAILABLE, message="'agy' CLI not found")
+        return ProviderHealth(
+            provider=self.name,
+            status=ProviderStatus.UNAVAILABLE,
+            message="'agy' CLI not found",
+        )
 
     def complete(self, request: AIRequest) -> AIResponse:
         import subprocess
+
         # Simply shell out to agy for the response
         cmd = ["agy", "--print", request.prompt]
         if request.system_prompt:
             cmd[-1] = request.system_prompt + "\n\n" + cmd[-1]
-            
+
         try:
-            completed = subprocess.run(cmd, capture_output=True, text=True, timeout=self._timeout_ms / 1000)
+            completed = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=self._timeout_ms / 1000
+            )
             return AIResponse(
                 request_id=request.request_id,
                 provider=self.name,
                 model="agy-default",
                 content=completed.stdout.strip(),
-                tool_calls=[] # Relying on agy's internal tools
+                tool_calls=[],  # Relying on agy's internal tools
             )
         except Exception as e:
             raise ProviderError(f"Antigravity CLI failed: {e}")
 
-    def respond(self, request: AIRequest, outputs: Sequence[AIToolOutput]) -> AIResponse:
+    def respond(
+        self, request: AIRequest, outputs: Sequence[AIToolOutput]
+    ) -> AIResponse:
         return self.complete(request)

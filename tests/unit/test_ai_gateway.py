@@ -18,7 +18,9 @@ class AIGatewayTests(unittest.TestCase):
         self.assertIn("unavailable", response.content.lower())
 
     def test_mock_provider_adds_safe_terminal_command(self) -> None:
-        response = AIGateway(MockAIProvider()).complete(AIRequest("run terminal command"))
+        response = AIGateway(MockAIProvider()).complete(
+            AIRequest("run terminal command")
+        )
 
         self.assertEqual(response.tool_calls[0].tool, "terminal.execute")
         self.assertEqual(response.tool_calls[0].arguments["command"], "pwd")

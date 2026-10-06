@@ -2,11 +2,17 @@
 
 Aggregates system state into a unified snapshot.
 """
-from typing import Any
 import platform
+from typing import Any
 
 from jarvis_core.protocol import ToolRequest
-from jarvis_core.tools import system_cpu, system_memory, process_list, service_list, network_status
+from jarvis_core.tools import (
+    network_status,
+    process_list,
+    system_cpu,
+    system_memory,
+)
+
 
 def generate_system_snapshot() -> dict[str, Any]:
     """Capture a high-level overview of the system state."""

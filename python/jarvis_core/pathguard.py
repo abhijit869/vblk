@@ -34,13 +34,19 @@ SENSITIVE_PATH_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"(^|/)\.docker/config\.json$"),
     re.compile(r"(^|/)\.config/(gcloud|gh|hub|op|rclone)(/|$)"),
     re.compile(r"(^|/)\.(mozilla|thunderbird)(/|$)"),
-    re.compile(r"(^|/)\.config/(google-chrome|chromium|BraveSoftware|microsoft-edge)(/|$)"),
+    re.compile(
+        r"(^|/)\.config/(google-chrome|chromium|BraveSoftware|microsoft-edge)(/|$)"
+    ),
     re.compile(r"(^|/)\.local/share/keyrings(/|$)"),
     re.compile(r"(^|/)\.env(\..*)?$"),
     re.compile(r"(^|/)id_(rsa|dsa|ecdsa|ed25519)[^/]*$"),
     re.compile(r"\.(pem|key|p12|pfx|jks|keystore|kdbx|gpg|asc)$"),
-    re.compile(r"(^|/)(\.netrc|\.pgpass|\.git-credentials|\.npmrc|\.pypirc|credentials(\.json)?)$"),
-    re.compile(r"(^|/)(\.bash_history|\.zsh_history|\.python_history|\.mysql_history|\.psql_history)$"),
+    re.compile(
+        r"(^|/)(\.netrc|\.pgpass|\.git-credentials|\.npmrc|\.pypirc|credentials(\.json)?)$"
+    ),
+    re.compile(
+        r"(^|/)(\.bash_history|\.zsh_history|\.python_history|\.mysql_history|\.psql_history)$"
+    ),
     re.compile(r"(^|/)\.git/config$"),
 )
 

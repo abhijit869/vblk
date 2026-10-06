@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import cmd
 import sys
-from typing import Any
 
 from jarvis_core.core import JarvisCore
 
@@ -27,19 +26,19 @@ class JarvisShell(cmd.Cmd):
         if not line.strip():
             return
 
-        print(f"JARVIS is thinking...")
+        print("JARVIS is thinking...")
         try:
             # We use the agent engine if we want multi-step, but for raw shell we just use handle_text
             # Wait, core.handle_text does the single/multi-tool execution.
             response = self.core.handle_text(line, self.session_id)
             self.session_id = response.get("session_id")
-            
+
             print(f"\n{response.get('answer')}\n")
-            
+
             if response.get("selected_tools"):
                 tools = ", ".join(response["selected_tools"])
                 print(f"[Tools used: {tools}]")
-                
+
         except Exception as e:
             print(f"[Error: {e}]")
 
@@ -64,6 +63,7 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\nGoodbye.")
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

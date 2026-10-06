@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Jarvis Control Panel
+Comment=Advanced AI Controller System for Jarvis OS
+Exec=/usr/bin/python3 /opt/jarvis/desktop/jarvis_panel.py
+Icon=preferences-system
+Terminal=false
+Categories=Settings;System;Utility;
+Keywords=jarvis;ai;control;panel;
+StartupNotify=true

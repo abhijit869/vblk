@@ -32,22 +32,25 @@ class CoreLoopTests(unittest.TestCase):
         self.assertEqual(response["result"]["data"]["risk"], "READ")
         self.assertEqual(response["result"]["data"]["exit_code"], 0)
 
-
-
     def test_core_with_memory(self) -> None:
         db = SQLiteMemoryEngine()
         core = JarvisCore(memory_engine=db)
         response = core.handle_text("What is my CPU usage?")
-        
+
         session_id = response.get("session_id")
         self.assertIsNotNone(session_id)
-        
+
         # Verify it was saved
-        cursor = db._conn.execute("SELECT count(*) FROM interactions WHERE session_id = ?", (session_id,))
+        cursor = db._conn.execute(
+            "SELECT count(*) FROM interactions WHERE session_id = ?", (session_id,)
+        )
         self.assertEqual(cursor.fetchone()[0], 1)
-        
-        cursor = db._conn.execute("SELECT count(*) FROM tool_calls WHERE session_id = ?", (session_id,))
+
+        cursor = db._conn.execute(
+            "SELECT count(*) FROM tool_calls WHERE session_id = ?", (session_id,)
+        )
         self.assertGreaterEqual(cursor.fetchone()[0], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

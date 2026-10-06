@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import cmd
 import sys
-from typing import Any
 
 from jarvis_core.core import JarvisCore
 
@@ -27,7 +26,7 @@ class JarvisShell(cmd.Cmd):
         if not line.strip():
             return
 
-        print(f"JARVIS is thinking...")
+        print("JARVIS is thinking...")
         try:
             # We use the agent engine if we want multi-step, but for raw shell we just use handle_text
             # Wait, core.handle_text does the single/multi-tool execution.

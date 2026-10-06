@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 sudo pkill -9 -f "lb build" || true
 sudo pkill -9 -f "debootstrap" || true
 sudo rm -rf /tmp/jarvis_build

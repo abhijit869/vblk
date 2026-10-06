@@ -9,10 +9,14 @@ class TerminalEngineTests(unittest.TestCase):
         self.assertEqual(classify_command(["ls", "-la"]), RiskLevel.READ)
 
     def test_classifies_destructive_command_high(self) -> None:
-        self.assertEqual(classify_command(["rm", "-rf", "/tmp/example"]), RiskLevel.HIGH)
+        self.assertEqual(
+            classify_command(["rm", "-rf", "/tmp/example"]), RiskLevel.HIGH
+        )
 
     def test_denies_command_above_max_risk(self) -> None:
-        result = TerminalEngine().execute(["rm", "-rf", "/tmp/example"], max_risk=RiskLevel.READ)
+        result = TerminalEngine().execute(
+            ["rm", "-rf", "/tmp/example"], max_risk=RiskLevel.READ
+        )
 
         self.assertEqual(result.risk, RiskLevel.HIGH)
         self.assertIsNone(result.exit_code)

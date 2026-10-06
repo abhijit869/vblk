@@ -13,7 +13,14 @@ import json
 from dataclasses import asdict
 from typing import Any
 
-from jarvis_core.ai_gateway import AIGateway, AIRequest, AIResponse, AIToolCall, AIToolOutput, AIToolSpec
+from jarvis_core.ai_gateway import (
+    AIGateway,
+    AIRequest,
+    AIResponse,
+    AIToolCall,
+    AIToolOutput,
+    AIToolSpec,
+)
 from jarvis_core.audit import AuditRecord, InMemoryAuditLog
 from jarvis_core.memory import SQLiteMemoryEngine
 from jarvis_core.protocol import RiskLevel, ToolDefinition, ToolRequest, ToolResult

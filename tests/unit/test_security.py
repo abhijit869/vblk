@@ -1,15 +1,15 @@
 import unittest
 from unittest.mock import MagicMock
 
+from jarvis_core.protocol import RiskLevel, ToolResult
 from jarvis_core.security import SecurityScanner
 from jarvis_core.tools import ToolRegistry
-from jarvis_core.protocol import ToolResult, RiskLevel
 
 
 class SecurityScannerTests(unittest.TestCase):
     def test_run_heuristics_scan(self) -> None:
         mock_registry = MagicMock(spec=ToolRegistry)
-        
+
         # Mock the process list result
         mock_registry.execute.return_value = ToolResult(
             request_id="test",
@@ -25,14 +25,14 @@ class SecurityScannerTests(unittest.TestCase):
             redacted=False,
             truncated=False,
         )
-        
+
         scanner = SecurityScanner(tools=mock_registry)
         report = scanner.run_heuristics_scan()
-        
+
         self.assertEqual(report.scanned_processes, 3)
         self.assertEqual(report.status, "threats_found")
         self.assertEqual(len(report.detected_threats), 2)
-        
+
         self.assertIn("volatile memory", report.detected_threats[0]["reason"])
         self.assertIn("cryptominer", report.detected_threats[1]["reason"])
 
