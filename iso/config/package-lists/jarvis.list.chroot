@@ -30,3 +30,5 @@ grub-efi-amd64-signed
 shim-signed
 grub-pc-bin
 grub-common
+isolinux
+syslinux-common

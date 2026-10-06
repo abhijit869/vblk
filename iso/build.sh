@@ -27,6 +27,7 @@ lb config \
     --linux-flavours "amd64" \
     --firmware-binary false \
     --firmware-chroot false \
+    --bootloader grub \
     --initramfs live-boot \
     --bootappend-live "boot=live components quiet splash mitigations=off" # Disable mitigations for max VM performance
 
@@ -37,6 +38,22 @@ cp -r ../python ../systemd ../desktop config/includes.chroot/opt/jarvis/
 # Systemd services
 cp ../systemd/jarvis-core.service config/includes.chroot/etc/systemd/system/
 cp ../systemd/jarvis-eventbus.service config/includes.chroot/etc/systemd/system/
+cp ../systemd/jarvis-local-ai.service config/includes.chroot/etc/systemd/system/ 
+
+mkdir -p config/includes.chroot/usr/lib/jarvis/models/emergency 
+mkdir -p config/includes.chroot/usr/lib/jarvis/llama.cpp 
+mkdir -p config/includes.chroot/usr/lib/jarvis/scripts 
+mkdir -p config/includes.chroot/etc/jarvis 
+mkdir -p config/includes.chroot/etc/sudoers.d 
+
+cp ../downloads/models/qwen3-1.7b-q4_k_m.gguf config/includes.chroot/usr/lib/jarvis/models/emergency/ || true 
+cp ../dist/llama.cpp/llama-server config/includes.chroot/usr/lib/jarvis/llama.cpp/ || true 
+cp ../config/local-ai/jarvis-local-ai.env config/includes.chroot/etc/jarvis/local-ai.env || true 
+cp ../scripts/local-ai-lifecycle.sh config/includes.chroot/usr/lib/jarvis/scripts/ || true 
+chmod +x config/includes.chroot/usr/lib/jarvis/scripts/local-ai-lifecycle.sh || true 
+cp ../config/local-ai/sudoers.d/jarvis-local-ai config/includes.chroot/etc/sudoers.d/ || true 
+chmod 440 config/includes.chroot/etc/sudoers.d/jarvis-local-ai || true 
+
 
 # Post-install hooks
 cat << 'HOOK' > config/hooks/normal/01-enable-jarvis.hook.chroot

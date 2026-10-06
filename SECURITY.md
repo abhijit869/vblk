@@ -100,3 +100,6 @@ The local model only receives restricted tool access. It is for offline diagnost
 ## Testing Boundary
 
 Destructive recovery tests must run only inside a VM, container lab, or dedicated test machine. They must never run against the developer's primary OS.
+
+## Local AI
+The Local AI runs as an unprivileged `jarvis` user in a hardened systemd service. It interacts with the system strictly through the JARVIS Tool Registry and Policy Engine, ensuring no uncontrolled access to the OS.

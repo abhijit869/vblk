@@ -151,3 +151,6 @@ chmod +x run_build_clean.sh
 
 ## 🔒 Security Posture
 Read our [SECURITY.md](SECURITY.md) for detailed guidelines. JARVIS operates under a strict **Zero-Trust** model for LLM-generated code. Dangerous binaries (like `rm`, `dd`, `mkfs`) are intercepted, Python is executed without network access, and standard shell commands are locked down into a read-only container view.
+
+## Fallback Mode
+In the event of a network outage or cloud API failure, JARVIS will automatically transition to a local Qwen3-1.7B CPU-only reasoning model. This ensures continued administrative and diagnostic capability even while offline.

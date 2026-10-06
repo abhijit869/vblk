@@ -127,3 +127,6 @@ Each service must define dependencies, restart policy, logging, health checks, a
 ## Build Strategy
 
 Development starts outside the ISO. The Debian ISO extraction is a local artifact for inspection. The source of truth should be tracked packages, overlays, service definitions, and build scripts. Custom ISO work begins only after core components are packaged and testable.
+
+## Local Emergency AI Brain (Qwen3-1.7B)
+JARVIS OS includes an emergency local fallback brain. When cloud AI fails, the AI Gateway falls back to a locally running Qwen3-1.7B model managed by llama.cpp in CPU-only mode.
