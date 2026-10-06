@@ -26,6 +26,7 @@ ufw
 macchanger
 cryptsetup
 firmware-linux-free
-isolinux
-syslinux-common
-syslinux-efi
+grub-efi-amd64-signed
+shim-signed
+grub-pc-bin
+grub-common

@@ -49,6 +49,9 @@ systemctl enable zramswap.service
 # 2. Setup Jarvis user and GUI autologin
 id -u jarvis &>/dev/null || useradd -m -s /bin/bash jarvis
 chown -R jarvis:jarvis /opt/jarvis
+# Create log and lib directories for jarvis
+mkdir -p /var/log/jarvis /var/lib/jarvis
+chown -R jarvis:jarvis /var/log/jarvis /var/lib/jarvis
 
 # 3. Precompile Python to bytecode for faster startup and lower RAM usage
 python3 -m compileall /opt/jarvis/python/jarvis_core
