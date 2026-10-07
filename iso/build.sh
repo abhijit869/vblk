@@ -27,7 +27,8 @@ lb config \
     --linux-flavours "amd64" \
     --firmware-binary false \
     --firmware-chroot false \
-    --bootloader grub \
+    --bootloaders "syslinux grub-efi" \
+    --uefi-secure-boot auto \
     --initramfs live-boot \
     --bootappend-live "boot=live components quiet splash mitigations=off" # Disable mitigations for max VM performance
 
@@ -46,7 +47,7 @@ mkdir -p config/includes.chroot/usr/lib/jarvis/scripts
 mkdir -p config/includes.chroot/etc/jarvis 
 mkdir -p config/includes.chroot/etc/sudoers.d 
 
-cp ../downloads/models/qwen3-1.7b-q4_k_m.gguf config/includes.chroot/usr/lib/jarvis/models/emergency/ || true 
+cp ../downloads/models/Qwen3-1.7B-Q4_K_M.gguf config/includes.chroot/usr/lib/jarvis/models/emergency/ || true 
 cp ../dist/llama.cpp/llama-server config/includes.chroot/usr/lib/jarvis/llama.cpp/ || true 
 cp ../config/local-ai/jarvis-local-ai.env config/includes.chroot/etc/jarvis/local-ai.env || true 
 cp ../scripts/local-ai-lifecycle.sh config/includes.chroot/usr/lib/jarvis/scripts/ || true 

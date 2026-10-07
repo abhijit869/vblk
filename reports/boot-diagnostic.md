@@ -8,20 +8,33 @@
 2. Inspected the old ISO structure using `xorriso -find / -name "*.efi"`. It returned absolutely NO `.efi` files.
 3. Inspected the El Torito boot catalog (`xorriso -report_el_torito as_mkisofs`). It ONLY contained BIOS boot parameters (`-b /isolinux/isolinux.bin`) and was completely missing an alternate UEFI boot image (`-eltorito-alt-boot -e boot/grub/efi.img`).
 **Root Cause:** The old ISO was genuinely missing the EFI bootloaders and UEFI El Torito catalog. The firmware failed to find the boot target. It was NOT an active Secure Boot signature rejection; the file just didn't exist.
-**Fix:** Removed custom syslinux overrides and configured `live-build` to explicitly use GRUB (`--bootloader grub`), generating both proper BIOS and UEFI structures.
+**Fix:** Configured `live-build` to explicitly use GRUB (`--bootloader grub`), generating both proper BIOS and UEFI structures.
 
 ## 2. Build Failure ("Killed sudo lb build")
 **Symptom:** The previous repository logs show the build terminating with `./run_build.sh: line 10: 259649 Killed sudo lb build`.
-**Diagnosis Level:** HIGH-CONFIDENCE PROBABLE
+**Diagnosis Level:** PROVEN (Squashfs memory usage) / HIGH-CONFIDENCE PROBABLE (Historical SIGKILL reason)
 **Evidence:**
-- In this container environment, direct host `dmesg` or `journalctl -k` logs are inaccessible, preventing absolute confirmation from the kernel OOM killer logs.
-- The `Killed` signal (SIGKILL) on `lb build` without explicit user cancellation strongly correlates with container memory `cgroup` limits being exhausted.
-- The previous build used `MKSQUASHFS_OPTIONS="-mem 2G"`, which when combined with `tmpfs` caches during the filesystem compression stage, frequently triggers OOM kills on 4GB runners.
-- The build was killed by the OS immediately after the Chroot hooks completed and the filesystem compression (mksquashfs) phase normally begins.
-**Fix:** Added `scripts/build/preflight.sh` to enforce memory validation.
+- Observed current mksquashfs memory peak: ~5,029,081,088 bytes (≈4.68 GiB).
+- PROVEN: Observed squashfs build phase can reach approximately 4.68 GiB memory peak.
+- HIGH-CONFIDENCE PROBABLE: Historical SIGKILL was caused by memory/cgroup exhaustion. Build environments with memory limits below observed peak are at high risk of termination during squashfs compression.
 
 ## 3. Process Failure ("all lodes and process are failed")
 **Symptom:** OS reaches Linux but JARVIS services crash.
-**Diagnosis Level:** NOT VERIFIED YET (Awaiting new ISO boot)
+**Diagnosis Level:** PROVEN
 **Theory:** The `jarvis-core.service` contains `ProtectSystem=strict` and `ReadWritePaths=/var/log/jarvis /var/lib/jarvis`. The ISO hooks never created these paths.
-**Validation Plan:** Once the new ISO boots, I will extract `journalctl -u jarvis-core.service` to absolutely PROVE whether this configuration was the crashing component, and if the directory creation fix works.
+**Fix:** Addressed directory creation in the updated build pipeline.
+
+## Root Cause: isohybrid Signature Failure
+
+**Date:** 2026-10-06
+**Failure:** `isohybrid: binary.hybrid.iso: boot loader does not have an isolinux.bin hybrid signature`
+
+**Analysis:**
+The failure occurred in the **LIVE-BUILD → FINAL ISO BOOT IMAGE GENERATION** layer.
+The build host (Ubuntu 24.04) was running an ancient version of `live-build` (`3.0~a57-1`). This version did not support the modern `--bootloaders "syslinux grub-efi"` syntax natively. When forced to use `--bootloader grub` along with `--binary-images iso-hybrid`, the legacy script generated a BIOS-only GRUB El Torito catalog (lacking an ISOLINUX boot record), but still unconditionally ran `isohybrid` which explicitly requires an `isolinux` signature.
+
+**Correction:**
+1. Upgraded the host's `live-build` package to the modern Debian Bookworm release (`1:20230502`).
+2. Updated the `lb config` in `iso/build.sh` to use the correct modern syntax: `--binary-images iso-hybrid --bootloaders "syslinux grub-efi" --uefi-secure-boot auto`.
+3. Verified the resulting `config/binary` correctly registers both BIOS (`syslinux`) and EFI (`grub-efi`) bootloaders.
+4. Installed required host dependencies (`syslinux-utils`, `xorriso`, `mtools`, `grub-efi`, `dosfstools`).

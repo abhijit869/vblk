@@ -1,0 +1,2 @@
+{ "execute": "qmp_capabilities" }
+{ "execute": "screendump", "arguments": { "filename": "qemu_bios_screen.ppm" } }
