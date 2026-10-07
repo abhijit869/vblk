@@ -81,6 +81,13 @@ sed -i 's/Environment="JARVIS_AI_PROVIDER/Environment="MALLOC_ARENA_MAX=2"\nEnvi
 mkdir -p /usr/share/applications
 cp /opt/jarvis/desktop/jarvis-panel.desktop /usr/share/applications/
 chmod 644 /usr/share/applications/jarvis-panel.desktop
+mkdir -p /usr/share/pixmaps
+cp /opt/jarvis/desktop/jarvis-files.desktop /usr/share/applications/
+chmod 644 /usr/share/applications/jarvis-files.desktop
+cp /opt/jarvis/desktop/icons/jarvis-files.svg /usr/share/pixmaps/
+chmod 644 /usr/share/pixmaps/jarvis-files.svg
+su - jarvis -c "xdg-mime default jarvis-files.desktop inode/directory"
+xdg-mime default jarvis-files.desktop inode/directory
 HOOK
 chmod +x config/hooks/normal/01-enable-jarvis.hook.chroot
 

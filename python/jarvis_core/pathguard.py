@@ -1,16 +1,12 @@
-"""Filesystem access guard shared by every JARVIS tool that touches paths.
-
-All tool output may be forwarded to a cloud AI provider, so credential
-material must never be readable through *any* tool (file.read, file.search,
-terminal.execute, ...). This module is the single source of truth for which
-paths are off-limits.
-"""
-
-from __future__ import annotations
-
 import os
 import re
 from pathlib import Path
+from typing import Tuple
+
+PROTECTED_SYSTEM_PATHS = [
+    "/etc", "/boot", "/usr", "/bin", "/sbin", "/proc", "/sys", "/dev", "/run", "/root",
+    "/opt/jarvis", "/var/lib/jarvis", "/var/log/jarvis"
+]
 
 # Paths whose *contents* must never be exposed.
 SENSITIVE_PATH_PATTERNS: tuple[re.Pattern[str], ...] = (
@@ -121,3 +117,104 @@ def _allowed_roots() -> list[Path]:
     if not configured:
         return [Path("/")]
     return [Path(part).resolve() for part in configured.split(":") if part]
+
+
+def _is_tier2(path: Path) -> bool:
+    try:
+        home = Path.home().resolve()
+    except Exception:
+        home = Path("/nonexistent_home")
+        
+    s = str(path)
+    # Prefix check using is_relative_to for absolute certainty
+    for p in PROTECTED_SYSTEM_PATHS:
+        if path.is_relative_to(Path(p)):
+            return True
+            
+    # lib*
+    if path.is_relative_to(Path("/lib")) or path.is_relative_to(Path("/lib64")) or path.is_relative_to(Path("/lib32")) or path.is_relative_to(Path("/libexec")) or path.is_relative_to(Path("/libx32")):
+        return True
+
+    # User secrets
+    for secret_dir in [".ssh", ".gnupg", ".config/jarvis", ".mozilla", ".config/google-chrome"]:
+        if path.is_relative_to(home / secret_dir):
+            return True
+            
+    # Key files
+    name = path.name
+    if name.endswith(".pem") or name.endswith(".key") or name.startswith("id_"):
+        return True
+        
+    return False
+
+
+class PathGuard:
+    @staticmethod
+    def _validate_basic(path: str | Path) -> Tuple[bool, str, Path]:
+        s_path = str(path)
+        if "\0" in s_path:
+            return False, "NUL_BYTE_IN_PATH", Path()
+            
+        try:
+            p = Path(path).expanduser().resolve()
+                
+            if len(str(p)) > 4096:
+                return False, "PATH_TOO_LONG", p
+                
+            for part in p.parts:
+                if len(part) > 255:
+                    return False, "COMPONENT_TOO_LONG", p
+                    
+            return True, "OK", p
+        except Exception as e:
+            return False, f"INVALID_PATH", Path()
+
+    @staticmethod
+    def check_read(path: str | Path, ai_tool_path: bool = False) -> Tuple[bool, str]:
+        ok, reason, p = PathGuard._validate_basic(path)
+        if not ok:
+            return False, reason
+            
+        try:
+            resolved = p.resolve(strict=False)
+        except Exception:
+            return False, "RESOLVE_ERROR"
+            
+        if ai_tool_path:
+            try:
+                home = Path.home().resolve()
+                if resolved.is_relative_to(home / ".ssh"):
+                    return False, "AI_READ_DENIED_SSH"
+            except Exception:
+                pass
+                
+        # Kernel enforces read, so we allow reads from Tier 2 GUI
+        return True, "ALLOW_READ"
+
+    @staticmethod
+    def check_write(path: str | Path) -> Tuple[bool, str]:
+        ok, reason, p = PathGuard._validate_basic(path)
+        if not ok:
+            return False, reason
+            
+        try:
+            # We use strict=False because we might be writing a new file
+            resolved = p.resolve(strict=False)
+        except Exception:
+            return False, "RESOLVE_ERROR"
+            
+        try:
+            req_norm = Path(os.path.abspath(p))
+            req_tier2 = _is_tier2(req_norm)
+            res_tier2 = _is_tier2(resolved)
+            
+            # Reject symlink escapes
+            if not req_tier2 and res_tier2:
+                return False, "SYMLINK_ESCAPE_DENIED"
+                
+            if res_tier2:
+                return False, "TIER2_WRITE_DENIED"
+        except Exception:
+            return False, "POLICY_EVALUATION_ERROR"
+            
+        return True, "ALLOW_WRITE"

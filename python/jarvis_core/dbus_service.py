@@ -18,7 +18,8 @@ try:
     # Attempt to use standard dbus-python bindings if available in the OS
     import dbus  # type: ignore
     import dbus.service  # type: ignore
-    from dbus.mainloop.glib import DBusGMainLoop  # type: ignore
+    from dbus.mainloop.glib import DBusGMainLoop
+    from gi.repository import GLib  # type: ignore
 
     DBUS_AVAILABLE = True
 except ImportError:
@@ -30,7 +31,7 @@ except ImportError:
             class Object:
                 pass
 
-            def method(dbus_interface, in_signature=None, out_signature=None):  # type: ignore
+            def method(dbus_interface, in_signature=None, out_signature=None, sender_keyword=None):  # type: ignore
                 def decorator(func):
                     return func
 
@@ -84,15 +85,109 @@ def start_dbus_service(core: JarvisCore) -> None:
         raise RuntimeError("dbus-python is not installed. Cannot start D-Bus service.")
 
     DBusGMainLoop(set_as_default=True)
-    bus = dbus.SessionBus()
+    bus = dbus.SystemBus()
     # Claim the bus name
     bus_name = dbus.service.BusName("com.jarvis.Core", bus)
 
     # Initialize the service
     service = JarvisDBusService(core, bus)
+    files_service = FilesInterface(core, bus)
     logger.info(f"JARVIS D-Bus Service running on {bus_name}")
 
     # Normally we would import GLib and run the mainloop here
     # from gi.repository import GLib
     # loop = GLib.MainLoop()
     # loop.run()
+
+class FilesInterface(dbus.service.Object if DBUS_AVAILABLE else object):
+    def __init__(self, core, bus, object_path="/com/jarvis/Files"):
+        self.core = core
+        if DBUS_AVAILABLE and bus:
+            super().__init__(bus, object_path)
+            
+    def _get_caller_user(self, sender) -> str:
+        if not sender or not DBUS_AVAILABLE:
+            return "unknown"
+        try:
+            bus = dbus.SystemBus()
+            proxy = bus.get_object("org.freedesktop.DBus", "/org/freedesktop/DBus")
+            iface = dbus.Interface(proxy, "org.freedesktop.DBus")
+            uid = iface.GetConnectionUnixUser(sender)
+            import pwd
+            return pwd.getpwuid(uid).pw_name
+        except Exception:
+            return "unknown"
+
+    def _audit(self, sender, op, path):
+        user = self._get_caller_user(sender)
+        from jarvis_core.audit import AuditRecord, ActionType
+        from jarvis_core.redaction import redact_text
+        record = AuditRecord(
+            action=ActionType.TOOL_CALL,
+            actor=f"desktop.file_explorer (user:{user})",
+            target="FileService",
+            details=f"{op} on {redact_text(path)}"
+        )
+        self.core.audit_log.record(record)
+
+    @dbus.service.method("com.jarvis.FilesInterface", in_signature="s", out_signature="s", sender_keyword="sender")
+    def ReportOperation(self, op: str, path: str, sender=None) -> str:
+        self._audit(sender, op, path)
+        return "OK"
+
+    # Map 1:1 onto Tool Registry tools
+    @dbus.service.method("com.jarvis.FilesInterface", in_signature="s", out_signature="s", sender_keyword="sender")
+    def List(self, path: str, sender=None) -> str:
+        self._audit(sender, "list", path)
+        from jarvis_core.files import FileService
+        import json
+        return json.dumps(FileService.list_dir(path))
+        
+    @dbus.service.method("com.jarvis.FilesInterface", in_signature="ss", out_signature="s", sender_keyword="sender")
+    def Rename(self, src: str, dst: str, sender=None) -> str:
+        self._audit(sender, "rename", src)
+        from jarvis_core.files import FileService
+        import json
+        return json.dumps(FileService.rename(src, dst))
+        
+    @dbus.service.method("com.jarvis.FilesInterface", in_signature="s", out_signature="s", sender_keyword="sender")
+    def Trash(self, path: str, sender=None) -> str:
+        self._audit(sender, "trash", path)
+        from jarvis_core.files import FileService
+        import json
+        return json.dumps(FileService.trash(path))
+
+    @dbus.service.method("com.jarvis.FilesInterface", in_signature="s", out_signature="s", sender_keyword="sender")
+    def Stat(self, path: str, sender=None) -> str:
+        self._audit(sender, "stat", path)
+        from jarvis_core.files import FileService
+        import json
+        return json.dumps(FileService.stat(path))
+
+    @dbus.service.method("com.jarvis.FilesInterface", in_signature="s", out_signature="s", sender_keyword="sender")
+    def Mkdir(self, path: str, sender=None) -> str:
+        self._audit(sender, "mkdir", path)
+        from jarvis_core.files import FileService
+        import json
+        return json.dumps(FileService.mkdir(path))
+
+    @dbus.service.method("com.jarvis.FilesInterface", in_signature="ss", out_signature="s", sender_keyword="sender")
+    def Copy(self, src: str, dst: str, sender=None) -> str:
+        self._audit(sender, "copy", f"{src} -> {dst}")
+        from jarvis_core.files import FileService
+        import json
+        return json.dumps(FileService.copy(src, dst))
+
+    @dbus.service.method("com.jarvis.FilesInterface", in_signature="ss", out_signature="s", sender_keyword="sender")
+    def Move(self, src: str, dst: str, sender=None) -> str:
+        self._audit(sender, "move", f"{src} -> {dst}")
+        from jarvis_core.files import FileService
+        import json
+        return json.dumps(FileService.move(src, dst))
+
+    @dbus.service.method("com.jarvis.FilesInterface", in_signature="ss", out_signature="s", sender_keyword="sender")
+    def Search(self, root: str, query: str, sender=None) -> str:
+        self._audit(sender, "search", root)
+        from jarvis_core.files import FileService
+        import json
+        return json.dumps(FileService.search(root, query))

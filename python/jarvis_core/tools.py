@@ -467,6 +467,55 @@ def build_default_registry() -> ToolRegistry:
         ),
         gui_type,
     )
+    registry.register(
+        ToolDefinition(
+            "file.list", 1, RiskLevel.READ, False, 2000, 32768,
+            "List directory contents",
+            {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}
+        ), _handle_file_list
+    )
+    registry.register(
+        ToolDefinition(
+            "file.stat", 1, RiskLevel.READ, False, 2000, 32768,
+            "Get file metadata",
+            {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}
+        ), _handle_file_stat
+    )
+    registry.register(
+        ToolDefinition(
+            "file.mkdir", 1, RiskLevel.LOW, True, 2000, 32768,
+            "Create a directory",
+            {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}
+        ), _handle_file_mkdir
+    )
+    registry.register(
+        ToolDefinition(
+            "file.copy", 1, RiskLevel.LOW, True, 2000, 32768,
+            "Copy a file or directory",
+            {"type": "object", "properties": {"src": {"type": "string"}, "dst": {"type": "string"}}, "required": ["src", "dst"], "additionalProperties": False}
+        ), _handle_file_copy
+    )
+    registry.register(
+        ToolDefinition(
+            "file.rename", 1, RiskLevel.MEDIUM, True, 2000, 32768,
+            "Rename a file or directory",
+            {"type": "object", "properties": {"src": {"type": "string"}, "name": {"type": "string"}}, "required": ["src", "name"], "additionalProperties": False}
+        ), _handle_file_rename
+    )
+    registry.register(
+        ToolDefinition(
+            "file.move", 1, RiskLevel.MEDIUM, True, 2000, 32768,
+            "Move a file or directory",
+            {"type": "object", "properties": {"src": {"type": "string"}, "dst": {"type": "string"}}, "required": ["src", "dst"], "additionalProperties": False}
+        ), _handle_file_move
+    )
+    registry.register(
+        ToolDefinition(
+            "file.trash", 1, RiskLevel.MEDIUM, True, 2000, 32768,
+            "Move a file to trash",
+            {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}
+        ), _handle_file_trash
+    )
     return registry
 
 
@@ -683,6 +732,9 @@ def network_status(_: ToolRequest) -> dict[str, Any]:
 
 
 def file_read(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.pathguard import PathGuard
+    ok, reason = PathGuard.check_read(request.arguments["path"], ai_tool_path=True)
+    if not ok: return {"path": request.arguments["path"], "error": reason}
     path = Path(request.arguments["path"]).resolve()
     try:
         content = path.read_text(encoding="utf-8")
@@ -694,6 +746,9 @@ def file_read(request: ToolRequest) -> dict[str, Any]:
 
 
 def file_search(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.pathguard import PathGuard
+    ok, reason = PathGuard.check_read(request.arguments["path"], ai_tool_path=True)
+    if not ok: return {"path": request.arguments["path"], "error": reason}
     path = Path(request.arguments.get("path", ".")).resolve()
     pattern = request.arguments["pattern"]
     if not path.is_dir():
@@ -976,3 +1031,33 @@ def validate_arguments(schema: dict[str, Any], arguments: dict[str, Any]) -> Non
         is_bool_for_number = isinstance(value, bool) and "boolean" not in allowed
         if not isinstance(value, python_types) or is_bool_for_number:
             raise ValueError(f"argument {name} must be of type {' or '.join(allowed)}")
+
+
+def _handle_file_list(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.list_dir(request.arguments["path"])
+
+def _handle_file_stat(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.stat(request.arguments["path"])
+
+def _handle_file_mkdir(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.mkdir(request.arguments["path"])
+
+def _handle_file_copy(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.copy(request.arguments["src"], request.arguments["dst"])
+
+def _handle_file_rename(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.rename(request.arguments["src"], request.arguments["name"])
+
+def _handle_file_move(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.move(request.arguments["src"], request.arguments["dst"])
+
+def _handle_file_trash(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.trash(request.arguments["path"])
+
