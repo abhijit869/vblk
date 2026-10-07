@@ -65,7 +65,7 @@ systemctl enable jarvis-eventbus.service
 systemctl enable zramswap.service
 
 # 2. Setup Jarvis user and GUI autologin
-id -u jarvis &>/dev/null || useradd -m -s /bin/bash jarvis
+id -u jarvis >/dev/null 2>&1 || useradd -m -s /bin/bash jarvis
 chown -R jarvis:jarvis /opt/jarvis
 # Create log and lib directories for jarvis
 mkdir -p /var/log/jarvis /var/lib/jarvis
