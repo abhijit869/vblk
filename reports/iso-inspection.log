@@ -1,0 +1,79 @@
+--- OLD ISO INSPECTION ---
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Loading ISO image tree from LBA 0
+xorriso : UPDATE :      20 nodes read in 1 seconds
+xorriso : NOTE : Detected El-Torito boot information which currently is set to be discarded
+Drive current: -indev 'JARVIS_OS_1.0-amd64.iso'
+Media current: stdio file, overwriteable
+Media status : is written , is appendable
+Boot record  : El Torito , MBR isohybrid cyl-align-on
+Media summary: 1 session, 282974 data blocks,  553m data, 13.9g free
+Volume id    : 'JARVIS_OS_1.0'
+xorriso : FAILURE : -find[ix]: unknown option '-print'
+xorriso : aborting : -abort_on 'FAILURE' encountered 'FAILURE'
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Loading ISO image tree from LBA 0
+xorriso : UPDATE :      20 nodes read in 1 seconds
+xorriso : NOTE : Detected El-Torito boot information which currently is set to be discarded
+Drive current: -indev 'JARVIS_OS_1.0-amd64.iso'
+Media current: stdio file, overwriteable
+Media status : is written , is appendable
+Boot record  : El Torito , MBR isohybrid cyl-align-on
+Media summary: 1 session, 282974 data blocks,  553m data, 13.9g free
+Volume id    : 'JARVIS_OS_1.0'
+xorriso : FAILURE : -find[ix]: unknown option '-print'
+xorriso : aborting : -abort_on 'FAILURE' encountered 'FAILURE'
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Loading ISO image tree from LBA 0
+xorriso : UPDATE :      20 nodes read in 1 seconds
+xorriso : NOTE : Detected El-Torito boot information which currently is set to be discarded
+Drive current: -indev 'JARVIS_OS_1.0-amd64.iso'
+Media current: stdio file, overwriteable
+Media status : is written , is appendable
+Boot record  : El Torito , MBR isohybrid cyl-align-on
+Media summary: 1 session, 282974 data blocks,  553m data, 13.9g free
+Volume id    : 'JARVIS_OS_1.0'
+xorriso : FAILURE : -find[ix]: unknown option '-print'
+xorriso : aborting : -abort_on 'FAILURE' encountered 'FAILURE'
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Loading ISO image tree from LBA 0
+xorriso : UPDATE :      20 nodes read in 1 seconds
+xorriso : NOTE : Detected El-Torito boot information which currently is set to be discarded
+Drive current: -indev 'JARVIS_OS_1.0-amd64.iso'
+Media current: stdio file, overwriteable
+Media status : is written , is appendable
+Boot record  : El Torito , MBR isohybrid cyl-align-on
+Media summary: 1 session, 282974 data blocks,  553m data, 13.9g free
+Volume id    : 'JARVIS_OS_1.0'
+xorriso : FAILURE : -find[ix]: unknown option '-print'
+xorriso : aborting : -abort_on 'FAILURE' encountered 'FAILURE'
+--- EL TORITO ---
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Loading ISO image tree from LBA 0
+xorriso : UPDATE :      20 nodes read in 1 seconds
+xorriso : NOTE : Detected El-Torito boot information which currently is set to be discarded
+Drive current: -indev 'JARVIS_OS_1.0-amd64.iso'
+Media current: stdio file, overwriteable
+Media status : is written , is appendable
+Boot record  : El Torito , MBR isohybrid cyl-align-on
+Media summary: 1 session, 282974 data blocks,  553m data, 13.9g free
+Volume id    : 'JARVIS_OS_1.0'
+-V 'JARVIS_OS_1.0'
+--modification-date='2026100614512700'
+-isohybrid-mbr --interval:local_fs:0s-15s:zero_mbrpt:'JARVIS_OS_1.0-amd64.iso'
+-partition_cyl_align on
+-partition_offset 0
+-partition_hd_cyl 64
+-partition_sec_hd 32
+--mbr-force-bootable
+-iso_mbr_part_type 0x17
+-c '/isolinux/boot.cat'
+-b '/isolinux/isolinux.bin'
+-no-emul-boot
+-boot-load-size 4
+-boot-info-table

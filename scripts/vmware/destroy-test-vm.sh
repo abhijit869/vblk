@@ -1,0 +1,2 @@
+#!/bin/bash
+echo "VMWARE_AUTOMATION_UNAVAILABLE"

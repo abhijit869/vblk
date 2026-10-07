@@ -1,0 +1,3 @@
+The corrected live-build environment and configuration are accepted.
+...
+END.

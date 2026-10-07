@@ -22,7 +22,7 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
-from jarvis_core.ai_gateway import AIGateway, MockAIProvider, OpenAICompatibleProvider
+from jarvis_core.ai_gateway import AIGateway, MockAIProvider, OpenAICompatibleProvider, LocalLlamaProvider
 
 DEFAULT_BASE_URL = "https://api.openai.com/v1"
 CLOUD_PROVIDERS = {
@@ -101,6 +101,13 @@ def build_ai_gateway(config: AIConfig | None = None) -> AIGateway:
         from jarvis_core.ai_gateway import GeminiProvider
 
         fallback_provider = GeminiProvider(api_key=os.environ.get("GEMINI_API_KEY", ""))
+    elif config.fallback == "local-llama":
+        from jarvis_core.ai_gateway import LocalLlamaProvider
+        fallback_provider = LocalLlamaProvider(
+            model=os.environ.get("JARVIS_LOCAL_AI_MODEL", "qwen3-1.7b-q4_k_m"),
+            base_url=os.environ.get("JARVIS_LOCAL_AI_BASE_URL", "http://127.0.0.1:8081/v1"),
+            timeout_ms=int(os.environ.get("JARVIS_LOCAL_TIMEOUT", "120000"))
+        )
     elif config.fallback == "mock":
         fallback_provider = MockAIProvider()
 
