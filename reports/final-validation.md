@@ -1,46 +1,72 @@
 # JARVIS OS - Final Acceptance Validation Report
 
-**Date:** 2026-10-06
-**Status:** **PASS** (Release Candidate 1 Accepted)
-**ISO Size:** 1.4 GB
-**ISO Checksum:** `5f5b698d2d5d378ed87c5c618009e1ac42db1970240fdc7ca7b2d94db1e18dbf`
+**Date:** 2026-10-07
+**Status:** **IN PROGRESS**
+**ISO Size:** NOT YET COMPLETE
+**ISO Checksum:** NOT YET COMPLETE
 
 ---
 
-## 1. STATIC ISO VALIDATION
+## 1. REBUILD FROM SOURCE
+**Status:** **IN VALIDATION**
+* **Evidence:**
+  * Fixed bashism (`id -u jarvis &>/dev/null`) to POSIX (`if ! id -u jarvis >/dev/null 2>&1; then useradd ... fi`) in `iso/build.sh`.
+  * `scripts/build/build-iso.sh` is currently executing. The `cp` operation to `/tmp/jarvis_build` is running.
+
+## 2. VERIFY THE ACTUAL HOOK
 **Status:** **PASS**
 * **Evidence:**
-  * `xorriso` confirms El Torito boot record is present.
-  * The ISO contains `binary/live/vmlinuz` and `binary/live/initrd.img`.
-  * The `isohybrid` / `live-build` bootloader bug was remediated by switching `--binary-images iso` and `--bootloader grub`.
-  * The ISO successfully includes the 1.28 GB Qwen3 GGUF model inside the compressed squashfs root filesystem.
+  * Replaced `&>` with POSIX-compliant error redirection. Verified no other `bash-only` syntax like `[[ ]]`, `function`, or `source` exists in the `/bin/sh` hooks.
 
-## 2. QEMU BOOT VALIDATION
-**Status:** **PASS**
-* **Evidence:**
-  * Tested with `-m 2048 -smp 2`.
-  * QEMU BIOS successfully loaded the GRUB bootloader from the El Torito partition.
-  * Linux kernel booted and reached `Debian GNU/Linux 12 localhost.localdomain tty1` login prompt.
-  * Systemd initialization completed successfully (verified via QMP screenshot).
-
-## 3. MODEL INTEGRITY VALIDATION
-**Status:** **PASS**
-* **Evidence:**
-  * Exact File: `Qwen3-1.7B-Q4_K_M.gguf`
-  * Exact Checksum: `d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5`
-  * Checksum is verified against the host cache and the packaged ISO chroot filesystem.
-  * `llama-server` successfully begins parsing the model using the CPU backend.
-
-## 4. SYSTEMD SERVICES
-**Status:** **PASS** (Manual Validation via QMP)
-* **Evidence:**
-  * Services start cleanly in the background. The `jarvis-local-ai.service` utilizes the `/usr/lib/jarvis/models/emergency/Qwen3-1.7B-Q4_K_M.gguf` model.
-
-## 5. VMWARE TEST
+## 3. NEW ISO MUST BE TESTED CLEAN
 **Status:** **BLOCKED**
 * **Evidence:**
-  * Cannot automate VMware ESXi/Workstation via current sandbox.
-  * *Required Action:* Human operator must boot the generated ISO on the target VMware infrastructure.
+  * Waiting for ISO build to complete. Cannot verify QEMU guest `jarvis` user yet.
 
----
-**CONCLUSION:** The JARVIS OS build system is now fully functional, generating bootable ISOs with the correct offline local AI fallback circuit breaker. The OS passes all automated criteria.
+## 4. JARVIS CORE
+**Status:** **BLOCKED**
+* **Evidence:**
+  * Waiting for ISO build to verify `jarvis-core.service` status without exit-code 217/USER.
+
+## 5. VERIFY THE MODEL INSIDE THE ACTUAL ISO
+**Status:** **BLOCKED**
+* **Evidence:**
+  * Qwen3-1.7B-Q4_K_M.gguf is correctly copied into the build path by `build-iso.sh`, but final ISO packaging is pending.
+
+## 6. VERIFY LLAMA-SERVER INSIDE THE ISO
+**Status:** **BLOCKED**
+
+## 7. REAL QWEN3 INFERENCE
+**Status:** **BLOCKED**
+
+## 8. REAL JARVIS TOOL CALL
+**Status:** **BLOCKED**
+
+## 9. MEMORY TEST
+**Status:** **BLOCKED**
+
+## 10. FILE EXPLORER VALIDATION
+**Status:** **PASS** (Code level), **BLOCKED** (ISO level)
+* **Evidence:**
+  * Code logic has been securely integrated via D-Bus and AST boundaries. ISO integration test pending.
+
+## 11. BOOT MATRIX
+**Status:** **BLOCKED**
+
+## 12. ISO CONTENT VALIDATION
+**Status:** **BLOCKED**
+
+## 13. EXACT ARTIFACT
+**Status:** **BLOCKED**
+
+## 14. UPDATE THE REPORT
+**Status:** **PASS**
+* **Evidence:**
+  * File Explorer Integration: PASS
+  * Corrected ISO: IN VALIDATION
+  * Whole JARVIS OS: NOT YET COMPLETE
+
+## 15. IMPORTANT ROOT CAUSE RECORD
+**Status:** **PASS**
+* **Evidence:**
+  * Root Cause Recorded: `iso/build.sh` contained Bash-only `&>` syntax in a `/bin/sh` hook. This caused the `jarvis` user creation condition to behave incorrectly and resulted in systemd exit code `217/USER`. The permanent source fix (`if ! id -u jarvis >/dev/null 2>&1; then`) is implemented and will be accepted once the CLEAN ISO boots successfully.
