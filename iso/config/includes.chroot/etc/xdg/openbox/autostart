@@ -1,5 +1,5 @@
-# Set the packaged default wallpaper from the JARVIS theme catalog.
-feh --bg-scale /opt/jarvis/desktop/themes/wallpapers/dark_wallpaper.jpg &
+# Start JARVIS Wallpaper Daemon to manage background
+/usr/bin/python3 /opt/jarvis/desktop/wallpaper_daemon.py &
 
 # Start terminal with JARVIS shell automatically
-x-terminal-emulator -e /opt/jarvis/bin/python3 -m jarvis_core.shell &
+x-terminal-emulator -e /usr/bin/python3 -m jarvis_core.shell &

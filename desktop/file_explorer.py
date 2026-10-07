@@ -213,6 +213,9 @@ class FileExplorer(tk.Tk):
         self.context_menu.add_command(label="Rename", command=self.rename_selected)
         self.context_menu.add_command(label="Move to Trash", command=self.trash_selected)
         self.context_menu.add_separator()
+        self.context_menu.add_command(label="Set as Wallpaper", command=self.set_as_wallpaper)
+        self.context_menu.add_command(label="Add to Wallpaper Library", command=self.add_to_wallpaper_library)
+        self.context_menu.add_separator()
         self.context_menu.add_command(label="Refresh", command=self.refresh)
 
         status_frame = ttk.Frame(self, padding=(8, 4))
@@ -606,6 +609,50 @@ class FileExplorer(tk.Tk):
         self.forward_button.configure(
             state="normal" if self.history_index < len(self.history) - 1 else "disabled"
         )
+
+    def set_as_wallpaper(self) -> None:
+        selection = self.tree.selection()
+        if not selection: return
+        iid = selection[0]
+        path = self.nodes.get(iid)
+        if not path or not path.is_file(): return
+        
+        if DBUS_AVAILABLE:
+            try:
+                bus = dbus.SystemBus()
+                proxy = bus.get_object("com.jarvis.Core", "/com/jarvis/Wallpaper")
+                iface = dbus.Interface(proxy, "com.jarvis.WallpaperInterface")
+                res_str = iface.AddWallpaper(str(path), path.name)
+                res = json.loads(res_str)
+                if res.get("success"):
+                    wid = res["wallpaper"]["id"]
+                    iface.SetCurrent(wid)
+                    messagebox.showinfo("Wallpaper", "Wallpaper applied successfully.")
+                else:
+                    messagebox.showerror("Error", res.get("error", "Unknown error"))
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to set wallpaper: {e}")
+
+    def add_to_wallpaper_library(self) -> None:
+        selection = self.tree.selection()
+        if not selection: return
+        iid = selection[0]
+        path = self.nodes.get(iid)
+        if not path or not path.is_file(): return
+        
+        if DBUS_AVAILABLE:
+            try:
+                bus = dbus.SystemBus()
+                proxy = bus.get_object("com.jarvis.Core", "/com/jarvis/Wallpaper")
+                iface = dbus.Interface(proxy, "com.jarvis.WallpaperInterface")
+                res_str = iface.AddWallpaper(str(path), path.name)
+                res = json.loads(res_str)
+                if res.get("success"):
+                    messagebox.showinfo("Wallpaper", "Added to Wallpaper Library.")
+                else:
+                    messagebox.showerror("Error", res.get("error", "Unknown error"))
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to add to library: {e}")
 
     def show_context_menu(self, event: tk.Event) -> None:
         row = self.tree.identify_row(event.y)

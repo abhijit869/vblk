@@ -37,6 +37,11 @@ except ImportError:
 
                 return decorator
 
+            def signal(dbus_interface, signature=None):
+                def decorator(func):
+                    return func
+                return decorator
+
 
 class JarvisDBusService(dbus.service.Object if DBUS_AVAILABLE else object):
     """JARVIS D-Bus service object."""
@@ -92,12 +97,78 @@ def start_dbus_service(core: JarvisCore) -> None:
     # Initialize the service
     service = JarvisDBusService(core, bus)
     files_service = FilesInterface(core, bus)
+    wallpaper_service = WallpaperInterface(core, bus)
     logger.info(f"JARVIS D-Bus Service running on {bus_name}")
 
     # Normally we would import GLib and run the mainloop here
     # from gi.repository import GLib
     # loop = GLib.MainLoop()
     # loop.run()
+
+class WallpaperInterface(dbus.service.Object if DBUS_AVAILABLE else object):
+    def __init__(self, core, bus, object_path="/com/jarvis/Wallpaper"):
+        self.core = core
+        from jarvis_core.wallpaper import WallpaperManager
+        self.manager = WallpaperManager()
+        if DBUS_AVAILABLE and bus:
+            super().__init__(bus, object_path)
+            
+    @dbus.service.signal("com.jarvis.WallpaperInterface", signature="s")
+    def WallpaperChanged(self, path: str):
+        """Signal emitted when wallpaper changes."""
+        pass
+
+    @dbus.service.method("com.jarvis.WallpaperInterface", in_signature="", out_signature="s")
+    def GetCurrent(self) -> str:
+        import json
+        return json.dumps(self.manager.get_current())
+
+    @dbus.service.method("com.jarvis.WallpaperInterface", in_signature="", out_signature="s")
+    def GetAll(self) -> str:
+        import json
+        return json.dumps(self.manager.get_all())
+
+    @dbus.service.method("com.jarvis.WallpaperInterface", in_signature="s", out_signature="b")
+    def SetCurrent(self, wallpaper_id: str) -> bool:
+        success = self.manager.set_current(wallpaper_id)
+        if success:
+            current = self.manager.get_current()
+            self.WallpaperChanged(current["path"])
+        return success
+
+    @dbus.service.method("com.jarvis.WallpaperInterface", in_signature="", out_signature="b")
+    def ResetDefault(self) -> bool:
+        success = self.manager.reset_default()
+        if success:
+            current = self.manager.get_current()
+            self.WallpaperChanged(current["path"])
+        return success
+
+    @dbus.service.method("com.jarvis.WallpaperInterface", in_signature="ss", out_signature="s")
+    def AddWallpaper(self, source_path: str, name: str) -> str:
+        import json
+        try:
+            meta = self.manager.add_user_wallpaper(source_path, name)
+            return json.dumps({"success": True, "wallpaper": meta})
+        except Exception as e:
+            return json.dumps({"success": False, "error": str(e)})
+
+    @dbus.service.method("com.jarvis.WallpaperInterface", in_signature="s", out_signature="b")
+    def RemoveWallpaper(self, wallpaper_id: str) -> bool:
+        try:
+            success = self.manager.remove_user_wallpaper(wallpaper_id)
+            if success:
+                # If we fell back to default, emit signal
+                current = self.manager.get_current()
+                if self.manager._cache.get("current") == "jarvis-default":
+                    self.WallpaperChanged(current["path"])
+            return success
+        except Exception:
+            return False
+
+    @dbus.service.method("com.jarvis.WallpaperInterface", in_signature="sb", out_signature="b")
+    def SetFavorite(self, wallpaper_id: str, favorite: bool) -> bool:
+        return self.manager.set_favorite(wallpaper_id, favorite)
 
 class FilesInterface(dbus.service.Object if DBUS_AVAILABLE else object):
     def __init__(self, core, bus, object_path="/com/jarvis/Files"):

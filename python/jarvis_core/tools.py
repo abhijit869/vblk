@@ -516,6 +516,7 @@ def build_default_registry() -> ToolRegistry:
             {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}
         ), _handle_file_trash
     )
+    register_wallpaper_tools(registry)
     return registry
 
 
@@ -1061,3 +1062,136 @@ def _handle_file_trash(request: ToolRequest) -> dict[str, Any]:
     from jarvis_core.files import FileService
     return FileService.trash(request.arguments["path"])
 
+
+WALLPAPER_SET_PARAMETERS = {
+    "type": "object",
+    "required": ["id"],
+    "properties": {
+        "id": {"type": "string", "description": "ID of the wallpaper to set."},
+    },
+    "additionalProperties": False,
+}
+
+WALLPAPER_ADD_PARAMETERS = {
+    "type": "object",
+    "required": ["source_path", "name"],
+    "properties": {
+        "source_path": {"type": "string", "description": "Absolute path to the image file to add."},
+        "name": {"type": "string", "description": "Name for the wallpaper."},
+    },
+    "additionalProperties": False,
+}
+
+WALLPAPER_REMOVE_PARAMETERS = {
+    "type": "object",
+    "required": ["id"],
+    "properties": {
+        "id": {"type": "string", "description": "ID of the wallpaper to remove."},
+    },
+    "additionalProperties": False,
+}
+
+WALLPAPER_FAVORITE_PARAMETERS = {
+    "type": "object",
+    "required": ["id", "favorite"],
+    "properties": {
+        "id": {"type": "string", "description": "ID of the wallpaper."},
+        "favorite": {"type": "boolean", "description": "True to favorite, False to unfavorite."},
+    },
+    "additionalProperties": False,
+}
+
+def register_wallpaper_tools(registry: ToolRegistry) -> None:
+    def _call_dbus(method: str, *args) -> Any:
+        import dbus
+        bus = dbus.SystemBus()
+        proxy = bus.get_object("com.jarvis.Core", "/com/jarvis/Wallpaper")
+        iface = dbus.Interface(proxy, "com.jarvis.WallpaperInterface")
+        return getattr(iface, method)(*args)
+
+    def handle_list(request: ToolRequest):
+        import json
+        return json.loads(_call_dbus("GetAll"))
+        
+    def handle_get_current(request: ToolRequest):
+        import json
+        return json.loads(_call_dbus("GetCurrent"))
+
+    def handle_set(request: ToolRequest):
+        wid = request.arguments["id"]
+        return {"success": bool(_call_dbus("SetCurrent", wid))}
+
+    def handle_add(request: ToolRequest):
+        import json
+        path = request.arguments["source_path"]
+        name = request.arguments["name"]
+        return json.loads(_call_dbus("AddWallpaper", path, name))
+
+    def handle_remove(request: ToolRequest):
+        wid = request.arguments["id"]
+        return {"success": bool(_call_dbus("RemoveWallpaper", wid))}
+
+    def handle_favorite(request: ToolRequest):
+        wid = request.arguments["id"]
+        fav = request.arguments["favorite"]
+        return {"success": bool(_call_dbus("SetFavorite", wid, fav))}
+
+    def handle_reset_default(request: ToolRequest):
+        return {"success": bool(_call_dbus("ResetDefault"))}
+
+    registry.register(
+        ToolDefinition(
+            "wallpaper.list", 1, RiskLevel.READ, False, 2000, 65536,
+            "List available wallpapers.",
+            {"type": "object", "properties": {}, "additionalProperties": False}
+        ),
+        handle_list
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.get_current", 1, RiskLevel.READ, False, 2000, 65536,
+            "Get the currently active wallpaper.",
+            {"type": "object", "properties": {}, "additionalProperties": False}
+        ),
+        handle_get_current
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.set", 1, RiskLevel.LOW, True, 2000, 1024,
+            "Set the desktop wallpaper.",
+            WALLPAPER_SET_PARAMETERS
+        ),
+        handle_set
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.add", 1, RiskLevel.MEDIUM, True, 5000, 10240,
+            "Import an image into the wallpaper library.",
+            WALLPAPER_ADD_PARAMETERS
+        ),
+        handle_add
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.remove", 1, RiskLevel.MEDIUM, True, 2000, 1024,
+            "Delete a user wallpaper from the library.",
+            WALLPAPER_REMOVE_PARAMETERS
+        ),
+        handle_remove
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.favorite", 1, RiskLevel.LOW, True, 2000, 1024,
+            "Mark or unmark a wallpaper as favorite.",
+            WALLPAPER_FAVORITE_PARAMETERS
+        ),
+        handle_favorite
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.reset_default", 1, RiskLevel.LOW, True, 2000, 1024,
+            "Restore the JARVIS Default wallpaper.",
+            {"type": "object", "properties": {}, "additionalProperties": False}
+        ),
+        handle_reset_default
+    )
