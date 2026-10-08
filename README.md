@@ -2,7 +2,7 @@
 
 ### 💿 **Download the JARVIS OS 1.0 ISO Here!**
 
-![JARVIS OS MacTahoe Theme](desktop/themes/wallpapers/mactahoe_dark_wallpaper.jpg)
+![JARVIS OS Futuristic Desktop Showcase](images/jarvis_showcase.jpeg)
 
 **JARVIS OS** is a fundamentally new type of Linux distribution. It is NOT merely Debian with a JARVIS assistant on top; it is an **AI-native operating system** based on a **Debian 12 (Bookworm)** foundation. JARVIS OS provides the intelligence, control plane, system tooling, AI orchestration, diagnostics, recovery, and a completely redesigned user experience.
 
