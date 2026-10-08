@@ -68,6 +68,105 @@ class JarvisTopBar(tk.Toplevel):
         subprocess.Popen(["/usr/bin/python3", "/opt/jarvis/desktop/jarvis_panel.py"])
 
 
+
+import os
+import glob
+import shlex
+
+class AppLauncher(tk.Toplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.title("JARVIS Applications")
+        self.overrideredirect(True)
+        width, height = 600, 400
+        x = (self.winfo_screenwidth() - width) // 2
+        y = (self.winfo_screenheight() - height) // 2 - 50
+        self.geometry(f"{width}x{height}+{x}+{y}")
+        self.configure(bg="#1E293B")
+        self.attributes("-topmost", True)
+
+        header = tk.Frame(self, bg="#0F172A", height=40)
+        header.pack(fill=tk.X)
+        lbl = tk.Label(header, text="Applications", bg="#0F172A", fg="#38BDF8", font=("Helvetica", 14, "bold"))
+        lbl.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        close_btn = tk.Button(header, text="X", bg="#EF4444", fg="white", bd=0, command=self.withdraw)
+        close_btn.pack(side=tk.RIGHT, padx=10)
+
+        self.canvas = tk.Canvas(self, bg="#1E293B", highlightthickness=0)
+        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = tk.Frame(self.canvas, bg="#1E293B")
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.canvas.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        self.scrollbar.pack(side="right", fill="y")
+
+        self.load_apps()
+        self.bind("<Escape>", lambda e: self.withdraw())
+        self.withdraw()
+
+    def load_apps(self):
+        paths = ['/usr/share/applications/*.desktop', os.path.expanduser('~/.local/share/applications/*.desktop')]
+        desktop_files = []
+        for path in paths:
+            desktop_files.extend(glob.glob(path))
+        
+        apps = []
+        for path in desktop_files:
+            app_info = {'name': '', 'exec': ''}
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    in_entry = False
+                    for line in f:
+                        line = line.strip()
+                        if line == '[Desktop Entry]':
+                            in_entry = True
+                            continue
+                        elif line.startswith('['):
+                            in_entry = False
+                        
+                        if in_entry:
+                            if line.startswith('Name=') and not app_info['name']:
+                                app_info['name'] = line.split('=', 1)[1]
+                            elif line.startswith('Exec=') and not app_info['exec']:
+                                app_info['exec'] = line.split('=', 1)[1].split('%')[0].strip()
+                            elif line.startswith('NoDisplay='):
+                                if line.split('=', 1)[1].lower() == 'true':
+                                    app_info = None
+                                    break
+            except Exception:
+                pass
+            if app_info and app_info['name'] and app_info['exec']:
+                apps.append(app_info)
+        
+        apps.sort(key=lambda x: x['name'])
+        
+        row, col = 0, 0
+        for app in apps:
+            btn = tk.Button(self.scrollable_frame, text=app['name'], bg="#334155", fg="white", bd=0, 
+                            font=("Helvetica", 10), width=20, height=2,
+                            command=lambda cmd=app['exec']: self.launch_app(cmd))
+            btn.grid(row=row, column=col, padx=5, pady=5)
+            col += 1
+            if col > 2:
+                col = 0
+                row += 1
+
+    def launch_app(self, cmd):
+        self.withdraw()
+        try:
+            subprocess.Popen(shlex.split(cmd))
+        except Exception as e:
+            messagebox.showerror("Launch Error", f"Could not launch app:\n{e}")
+
+
 class JarvisDock(tk.Toplevel):
     def __init__(self, master, ai_surface):
         super().__init__(master)
@@ -76,7 +175,7 @@ class JarvisDock(tk.Toplevel):
         # Position at bottom center
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
-        width = 400
+        width = 500
         height = 48
         x = (screen_width - width) // 2
         y = screen_height - height - 10
@@ -89,6 +188,7 @@ class JarvisDock(tk.Toplevel):
             pass
 
         self.apps = [
+            ("Apps", self.toggle_launcher, "#F59E0B"),
             ("File Explorer", self.launch_explorer, "#3B82F6"),
             ("Terminal", self.launch_terminal, "#10B981"),
             ("AI Assistant", self.toggle_ai, "#8B5CF6")
@@ -100,6 +200,13 @@ class JarvisDock(tk.Toplevel):
 
     def launch_explorer(self):
         subprocess.Popen(["/usr/bin/python3", "/opt/jarvis/desktop/file_explorer.py"])
+
+    def toggle_launcher(self):
+        if self.ai_surface.master.launcher.winfo_ismapped():
+            self.ai_surface.master.launcher.withdraw()
+        else:
+            self.ai_surface.master.launcher.deiconify()
+            self.ai_surface.master.launcher.focus_force()
 
     def launch_terminal(self):
         subprocess.Popen(["x-terminal-emulator"])
@@ -172,6 +279,7 @@ class JarvisShell(tk.Tk):
             except Exception:
                 pass
 
+        self.launcher = AppLauncher(self)
         self.ai_surface = AICommandSurface(self, self.jarvis_iface)
         self.top_bar = JarvisTopBar(self, self.jarvis_iface)
         self.dock = JarvisDock(self, self.ai_surface)

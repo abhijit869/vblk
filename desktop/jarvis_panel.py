@@ -89,8 +89,56 @@ class JarvisControlPanel(tk.Tk):
         ttk.Button(btn_frame, text="Apply", command=self.apply_wallpaper).pack(side=tk.LEFT, padx=2)
         ttk.Button(btn_frame, text="Reset Default", command=self.reset_wallpaper).pack(side=tk.LEFT, padx=2)
         
+        # --- Network Tab ---
+        network_frame = ttk.Frame(notebook, padding="10")
+        notebook.add(network_frame, text="Network")
+        
+        self.net_text = tk.Text(network_frame, height=15, width=45, bg="#111827", fg="#A7F3D0", font=("Consolas", 10))
+        self.net_text.pack(fill=tk.BOTH, expand=True)
+        ttk.Button(network_frame, text="Refresh Network", command=self.refresh_network).pack(pady=5)
+        
+        # --- System Monitor Tab ---
+        monitor_frame = ttk.Frame(notebook, padding="10")
+        notebook.add(monitor_frame, text="System Monitor")
+        
+        self.mon_text = tk.Text(monitor_frame, height=15, width=45, bg="#111827", fg="#38BDF8", font=("Consolas", 10))
+        self.mon_text.pack(fill=tk.BOTH, expand=True)
+        ttk.Button(monitor_frame, text="Refresh Monitor", command=self.refresh_monitor).pack(pady=5)
+        
         self.wp_manager = None
         self.refresh_wallpapers()
+        
+        # Initial data fetch
+        self.after(500, self.refresh_network)
+        self.after(500, self.refresh_monitor)
+
+    def _call_tool(self, tool_name):
+        if not self.jarvis_iface:
+            return "D-Bus not connected"
+        try:
+            # We must call Ask to route via natural language, or add a D-Bus method to invoke tools.
+            # But the simplest is to ask JARVIS to execute it or check if we added a direct tool invocation.
+            # Let's just ask JARVIS.
+            response = self.jarvis_iface.Ask("panel", f"Give me a very brief raw JSON summary of {tool_name}")
+            return response
+        except Exception as e:
+            return f"Error: {e}"
+
+    def refresh_network(self):
+        self.net_text.delete(1.0, tk.END)
+        self.net_text.insert(tk.END, "Loading network status...\n")
+        self.update()
+        res = self._call_tool("network status")
+        self.net_text.delete(1.0, tk.END)
+        self.net_text.insert(tk.END, res)
+        
+    def refresh_monitor(self):
+        self.mon_text.delete(1.0, tk.END)
+        self.mon_text.insert(tk.END, "Loading system monitor...\n")
+        self.update()
+        res = self._call_tool("CPU and memory usage")
+        self.mon_text.delete(1.0, tk.END)
+        self.mon_text.insert(tk.END, res)
 
     def refresh_wallpapers(self):
         if not dbus:
