@@ -11,9 +11,14 @@ from jarvis_core.protocol import ToolRequest, ToolResult
 
 
 class SQLiteMemoryEngine:
-    def __init__(self, db_path: str = ":memory:") -> None:
+    def __init__(self, db_path: str = "/var/lib/jarvis/memory.db") -> None:
         self.db_path = db_path
         if self.db_path != ":memory:":
+            import os
+            # Fallback to /tmp if unprivileged
+            if not os.access("/var/lib", os.W_OK) and self.db_path.startswith("/var/lib"):
+                self.db_path = "/tmp/jarvis/memory.db"
+
             path = Path(self.db_path)
             path.parent.mkdir(parents=True, exist_ok=True)
             self.db_path = str(path.absolute())

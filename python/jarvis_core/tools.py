@@ -250,6 +250,46 @@ TERMINAL_PARAMETERS = {
 }
 
 
+import subprocess
+import json
+from jarvis_core.protocol import ToolRequest
+
+def handle_diag_network(request: ToolRequest):
+    try:
+        ip = subprocess.run(["ip", "-brief", "a"], capture_output=True, text=True, check=True).stdout
+        routes = subprocess.run(["ip", "-brief", "route"], capture_output=True, text=True, check=True).stdout
+        return {"interfaces": ip, "routes": routes}
+    except Exception as e:
+        return {"error": str(e)}
+
+def handle_diag_system(request: ToolRequest):
+    try:
+        mem = subprocess.run(["free", "-h"], capture_output=True, text=True, check=True).stdout
+        cpu = subprocess.run(["top", "-bn1"], capture_output=True, text=True, check=True).stdout.split('\n')[:5]
+        return {"memory": mem, "cpu": "\n".join(cpu)}
+    except Exception as e:
+        return {"error": str(e)}
+
+def register_diagnostics_tools(registry):
+    from jarvis_core.protocol import ToolDefinition, RiskLevel
+    registry.register(
+        ToolDefinition(
+            "diagnostics.network", 1, RiskLevel.READ, False, 2000, 65536,
+            "Get deterministic network diagnostic information.",
+            {"type": "object", "properties": {}, "additionalProperties": False}
+        ),
+        handle_diag_network
+    )
+    registry.register(
+        ToolDefinition(
+            "diagnostics.system", 1, RiskLevel.READ, False, 2000, 65536,
+            "Get deterministic system monitor diagnostics.",
+            {"type": "object", "properties": {}, "additionalProperties": False}
+        ),
+        handle_diag_system
+    )
+
+
 def build_default_registry() -> ToolRegistry:
     registry = ToolRegistry()
     registry.register(

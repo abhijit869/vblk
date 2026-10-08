@@ -16,6 +16,7 @@ class JarvisControlPanel(tk.Tk):
         
         self.bus = None
         self.jarvis_iface = None
+        self.jarvis_diag = None
         
         self.create_widgets()
         self.connect_dbus()
@@ -29,6 +30,8 @@ class JarvisControlPanel(tk.Tk):
             self.bus = dbus.SystemBus()
             proxy = self.bus.get_object("com.jarvis.Core", "/com/jarvis/Core")
             self.jarvis_iface = dbus.Interface(proxy, "com.jarvis.CoreInterface")
+            dproxy = self.bus.get_object("com.jarvis.Core", "/com/jarvis/Diagnostics")
+            self.jarvis_diag = dbus.Interface(dproxy, "com.jarvis.DiagnosticsInterface")
             status = self.jarvis_iface.Status()
             self.status_label.config(text=f"Core Status: {status}", foreground="green")
         except dbus.DBusException:
@@ -112,33 +115,47 @@ class JarvisControlPanel(tk.Tk):
         self.after(500, self.refresh_network)
         self.after(500, self.refresh_monitor)
 
-    def _call_tool(self, tool_name):
-        if not self.jarvis_iface:
-            return "D-Bus not connected"
-        try:
-            # We must call Ask to route via natural language, or add a D-Bus method to invoke tools.
-            # But the simplest is to ask JARVIS to execute it or check if we added a direct tool invocation.
-            # Let's just ask JARVIS.
-            response = self.jarvis_iface.Ask("panel", f"Give me a very brief raw JSON summary of {tool_name}")
-            return response
-        except Exception as e:
-            return f"Error: {e}"
+    
 
     def refresh_network(self):
         self.net_text.delete(1.0, tk.END)
         self.net_text.insert(tk.END, "Loading network status...\n")
         self.update()
-        res = self._call_tool("network status")
-        self.net_text.delete(1.0, tk.END)
-        self.net_text.insert(tk.END, res)
+        if not self.jarvis_diag:
+            self.net_text.insert(tk.END, "Error: D-Bus not connected")
+            return
+        try:
+            import json
+            res = json.loads(self.jarvis_diag.GetNetwork())
+            if res.get('status') == 'ok':
+                self.net_text.delete(1.0, tk.END)
+                self.net_text.insert(tk.END, res['data'].get('interfaces', ''))
+                self.net_text.insert(tk.END, "\n\nRoutes:\n")
+                self.net_text.insert(tk.END, res['data'].get('routes', ''))
+            else:
+                self.net_text.insert(tk.END, "Error retrieving data")
+        except Exception as e:
+            self.net_text.insert(tk.END, f"Error: {e}")
         
     def refresh_monitor(self):
         self.mon_text.delete(1.0, tk.END)
         self.mon_text.insert(tk.END, "Loading system monitor...\n")
         self.update()
-        res = self._call_tool("CPU and memory usage")
-        self.mon_text.delete(1.0, tk.END)
-        self.mon_text.insert(tk.END, res)
+        if not self.jarvis_diag:
+            self.mon_text.insert(tk.END, "Error: D-Bus not connected")
+            return
+        try:
+            import json
+            res = json.loads(self.jarvis_diag.GetSystem())
+            if res.get('status') == 'ok':
+                self.mon_text.delete(1.0, tk.END)
+                self.mon_text.insert(tk.END, res['data'].get('memory', ''))
+                self.mon_text.insert(tk.END, "\n\nCPU:\n")
+                self.mon_text.insert(tk.END, res['data'].get('cpu', ''))
+            else:
+                self.mon_text.insert(tk.END, "Error retrieving data")
+        except Exception as e:
+            self.mon_text.insert(tk.END, f"Error: {e}")
 
     def refresh_wallpapers(self):
         if not dbus:

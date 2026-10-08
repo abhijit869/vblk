@@ -98,6 +98,7 @@ def start_dbus_service(core: JarvisCore) -> None:
     service = JarvisDBusService(core, bus)
     files_service = FilesInterface(core, bus)
     wallpaper_service = WallpaperInterface(core, bus)
+    diagnostics_service = DiagnosticsInterface(core, bus)
     logger.info(f"JARVIS D-Bus Service running on {bus_name}")
 
     from gi.repository import GLib
@@ -314,3 +315,30 @@ class FilesInterface(dbus.service.Object if DBUS_AVAILABLE else object):
     def Search(self, root: str, query: str, sender=None) -> str:
         # ToolRegistry might not have file.search exactly mapped to this signature, but we'll try
         return self._execute_tool(sender, "file.search", {"root": root, "query": query})
+
+class DiagnosticsInterface(dbus.service.Object if DBUS_AVAILABLE else object):
+    def __init__(self, core, bus, object_path="/com/jarvis/Diagnostics"):
+        self.core = core
+        if DBUS_AVAILABLE and bus:
+            super().__init__(bus, object_path)
+            
+    def _execute_tool(self, tool_name: str, kwargs: dict) -> str:
+        from jarvis_core.protocol import ToolRequest, RiskLevel
+        import json
+        req = ToolRequest(
+            tool=tool_name,
+            arguments=kwargs,
+            caller=f"desktop",
+            max_risk=RiskLevel.READ,
+        )
+        object.__setattr__(req, 'authorized', True)
+        result = self.core._tools.execute(req)
+        return json.dumps({"status": result.status, "data": result.data})
+
+    @dbus.service.method("com.jarvis.DiagnosticsInterface", in_signature="", out_signature="s")
+    def GetNetwork(self) -> str:
+        return self._execute_tool("diagnostics.network", {})
+
+    @dbus.service.method("com.jarvis.DiagnosticsInterface", in_signature="", out_signature="s")
+    def GetSystem(self) -> str:
+        return self._execute_tool("diagnostics.system", {})
