@@ -153,8 +153,9 @@ class JarvisAppLauncher(tk.Toplevel):
         self.withdraw()
 
 class JarvisWidgets(tk.Toplevel):
-    def __init__(self, master):
+    def __init__(self, master, dbus_iface=None):
         super().__init__(master)
+        self.dbus_iface = dbus_iface
         self.overrideredirect(True)
         w = 260
         h = self.winfo_screenheight() - 80
@@ -162,7 +163,6 @@ class JarvisWidgets(tk.Toplevel):
         y = 40
         self.geometry(f"{w}x{h}+{x}+{y}")
         self.configure(bg=BG_BASE)
-        # Transparent background trick for toplevel if possible, otherwise use BG_BASE
         self.attributes("-topmost", True)
         self.attributes("-alpha", 0.95)
 
@@ -173,16 +173,21 @@ class JarvisWidgets(tk.Toplevel):
         
         sys_rings = tk.Frame(sys_f, bg=BG_SURFACE)
         sys_rings.pack(fill=tk.X, pady=10)
-        for stat, val in [("CPU", "12%"), ("RAM", "19%"), ("Disk", "18%")]:
+        self.sys_labels = {}
+        for stat in ["CPU", "RAM", "Disk"]:
             sf = tk.Frame(sys_rings, bg=BG_SURFACE)
             sf.pack(side=tk.LEFT, expand=True)
-            tk.Label(sf, text=val, bg=BG_SURFACE, fg=ACCENT, font=("Helvetica", 12, "bold")).pack()
+            lbl = tk.Label(sf, text="--%", bg=BG_SURFACE, fg=ACCENT, font=("Helvetica", 12, "bold"))
+            lbl.pack()
             tk.Label(sf, text=stat, bg=BG_SURFACE, fg=TEXT_MUTED, font=("Helvetica", 8)).pack()
+            self.sys_labels[stat] = lbl
             
         # JARVIS AI
         ai_f = tk.Frame(self, bg=BG_SURFACE)
         ai_f.pack(fill=tk.X, pady=15)
-        tk.Label(ai_f, text="🤖 JARVIS AI (Qwen3)\nReady - Local Inference", bg=BG_SURFACE, fg=ACCENT, anchor="w", justify=tk.LEFT).pack(fill=tk.X, padx=10, pady=10)
+        self.ai_status_lbl = tk.Label(ai_f, text="🤖 JARVIS AI
+Loading...", bg=BG_SURFACE, fg=ACCENT, anchor="w", justify=tk.LEFT)
+        self.ai_status_lbl.pack(fill=tk.X, padx=10, pady=10)
         
         for action in ["💬 Chat with JARVIS", "✨ Create Code", "📄 Analyze Files", "🖼 Generate Images", "🌐 Browse the Web"]:
             tk.Label(ai_f, text=f"{action}  >", bg=BG_ELEVATED, fg=TEXT_MAIN, anchor="w").pack(fill=tk.X, padx=10, pady=2, ipady=4)
@@ -193,26 +198,65 @@ class JarvisWidgets(tk.Toplevel):
         tk.Label(net_f, text="⊕ Network", bg=BG_SURFACE, fg=TEXT_MUTED, anchor="w").pack(fill=tk.X, padx=10, pady=5)
         nf = tk.Frame(net_f, bg=BG_SURFACE)
         nf.pack(fill=tk.X, padx=10, pady=5)
-        tk.Label(nf, text="Download\n125 KB/s", bg=BG_SURFACE, fg=TEXT_MAIN, justify=tk.LEFT).pack(side=tk.LEFT, expand=True)
-        tk.Label(nf, text="Upload\n48 KB/s", bg=BG_SURFACE, fg=TEXT_MAIN, justify=tk.LEFT).pack(side=tk.RIGHT, expand=True)
+        self.net_down_lbl = tk.Label(nf, text="Download
+-- KB/s", bg=BG_SURFACE, fg=TEXT_MAIN, justify=tk.LEFT)
+        self.net_down_lbl.pack(side=tk.LEFT, expand=True)
+        self.net_up_lbl = tk.Label(nf, text="Upload
+-- KB/s", bg=BG_SURFACE, fg=TEXT_MAIN, justify=tk.LEFT)
+        self.net_up_lbl.pack(side=tk.RIGHT, expand=True)
 
         # Storage
         stor_f = tk.Frame(self, bg=BG_SURFACE)
         stor_f.pack(fill=tk.X, pady=15)
         tk.Label(stor_f, text="⛁ Storage", bg=BG_SURFACE, fg=TEXT_MUTED, anchor="w").pack(fill=tk.X, padx=10, pady=5)
-        tk.Label(stor_f, text="Root (/)              23 GB / 100 GB", bg=BG_SURFACE, fg=TEXT_MAIN, font=("Helvetica", 9)).pack(anchor="w", padx=10)
-        tk.Label(stor_f, text="Data (/home)        120 GB / 500 GB", bg=BG_SURFACE, fg=TEXT_MAIN, font=("Helvetica", 9)).pack(anchor="w", padx=10, pady=(5,0))
+        self.stor_root_lbl = tk.Label(stor_f, text="Root (/)              -- GB / -- GB", bg=BG_SURFACE, fg=TEXT_MAIN, font=("Helvetica", 9))
+        self.stor_root_lbl.pack(anchor="w", padx=10)
+        self.stor_data_lbl = tk.Label(stor_f, text="Data (/home)        -- GB / -- GB", bg=BG_SURFACE, fg=TEXT_MAIN, font=("Helvetica", 9))
+        self.stor_data_lbl.pack(anchor="w", padx=10, pady=(5,0))
+        
+        self.update_loop()
+
+    def update_loop(self):
+        if self.dbus_iface:
+            try:
+                sys_res = json.loads(self.dbus_iface.GetSystemStatus())
+                if sys_res.get("status") == "ok":
+                    data = sys_res.get("data", {})
+                    self.sys_labels["CPU"].config(text=f"{data.get('cpu_percent', 0):.1f}%")
+                    self.sys_labels["RAM"].config(text=f"{data.get('ram_percent', 0):.1f}%")
+                    self.sys_labels["Disk"].config(text=f"{data.get('disk_percent', 0):.1f}%")
+            except Exception:
+                pass
+                
+            try:
+                ai_res = json.loads(self.dbus_iface.GetLocalAIStatus())
+                if ai_res.get("status") == "ok":
+                    data = ai_res.get("data", {})
+                    self.ai_status_lbl.config(text=f"🤖 JARVIS AI ({data.get('model', 'Unknown')})
+{data.get('state', 'Unknown')}")
+            except Exception:
+                pass
+        
+        self.after(2000, self.update_loop)
 
 class JarvisDesktopApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.withdraw()
         
+        self.dbus_iface = None
+        try:
+            bus = dbus.SystemBus()
+            proxy = bus.get_object("com.jarvis.Core", "/com/jarvis/Diagnostics")
+            self.dbus_iface = dbus.Interface(proxy, "com.jarvis.DiagnosticsInterface")
+        except Exception:
+            pass
+            
         self.top_bar = JarvisTopBar(self)
         self.launcher = JarvisAppLauncher(self)
         self.left_dock = JarvisLeftDock(self, self.toggle_menu)
         self.bottom_dock = JarvisBottomDock(self)
-        self.widgets = JarvisWidgets(self)
+        self.widgets = JarvisWidgets(self, self.dbus_iface)
 
     def toggle_menu(self):
         if self.launcher.winfo_ismapped():
