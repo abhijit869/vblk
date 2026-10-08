@@ -77,7 +77,7 @@ if ! id -u jarvis >/dev/null 2>&1; then
 fi
 chown -R jarvis:jarvis /opt/jarvis
 # Create log and lib directories for jarvis
-mkdir -p /var/log/jarvis /var/lib/jarvis
+mkdir -p /var/log/jarvis/local-ai /var/lib/jarvis/local-ai
 chown -R jarvis:jarvis /var/log/jarvis /var/lib/jarvis
 
 # 3. Precompile Python to bytecode for faster startup and lower RAM usage

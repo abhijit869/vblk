@@ -20,9 +20,11 @@ def assert_cmd(ssh, cmd, expected=None):
         return False
     return True
 
-def test_vm(mem="4G", smp="4", uefi=False):
-    log(f"Testing VM with mem={mem}, smp={smp}, uefi={uefi}")
+def test_vm(mem="4G", smp="4", uefi=False, cpu_model=None):
+    log(f"Testing VM with mem={mem}, smp={smp}, uefi={uefi}, cpu={cpu_model}")
     cmd = f"sudo qemu-system-x86_64 -m {mem} -smp {smp} -enable-kvm -cdrom {ISO_PATH} -netdev user,id=n1,hostfwd=tcp::22222-:22 -device e1000,netdev=n1 -vnc :0 -monitor stdio -serial file:{BOOT_LOG}"
+    if cpu_model:
+        cmd += f" -cpu {cpu_model}"
     if uefi:
         cmd += " -bios /usr/share/ovmf/OVMF.fd"
         
@@ -142,14 +144,19 @@ def main():
     os.system(f"sha256sum {ISO_PATH}")
     os.system(f"xorriso -indev {ISO_PATH} -toc")
     
-    # 4GB test
-    res_4g = test_vm("4G", "4", False)
+    # Profile A: Portable (no CPU flag, defaults to qemu64 without AVX)
+    res_4g_port = test_vm("4G", "4", False, cpu_model=None)
+    res_2g_port = test_vm("2G", "2", False, cpu_model=None)
+
+    # Profile B: Host Performance (requires KVM host with AVX)
+    res_4g_host = test_vm("4G", "4", False, cpu_model="host")
     
-    # 2GB test
-    res_2g = test_vm("2G", "2", False)
+    log(f"4G Portable Test: {'PASS' if res_4g_port else 'FAIL'}")
+    log(f"2G Portable Test: {'PASS' if res_2g_port else 'FAIL'}")
+    log(f"4G Host Perf Test: {'PASS' if res_4g_host else 'FAIL'}")
     
-    log(f"4G Test: {'PASS' if res_4g else 'FAIL'}")
-    log(f"2G Test: {'PASS' if res_2g else 'FAIL'}")
+    if not (res_4g_port and res_2g_port and res_4g_host):
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

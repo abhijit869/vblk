@@ -31,10 +31,18 @@ echo "Building llama.cpp in debian:bookworm container to match ISO glibc..."
 docker run --rm \
     -v "$BUILD_DIR:/src" \
     -w /src/build \
-    debian:bookworm bash -c "apt-get update && apt-get install -y build-essential cmake git && cmake .. -DGGML_CUDA=OFF -DGGML_VULKAN=OFF -DGGML_METAL=OFF -DGGML_NATIVE=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build . --config Release -j\$(nproc) --target llama-server && chown -R $(id -u):$(id -g) /src/build"
+    debian:bookworm bash -c "apt-get update && apt-get install -y build-essential cmake git && cmake .. -DGGML_CUDA=OFF -DGGML_VULKAN=OFF -DGGML_METAL=OFF -DGGML_NATIVE=OFF -DGGML_AVX=OFF -DGGML_AVX2=OFF -DGGML_FMA=OFF -DGGML_F16C=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build . --config Release -j\$(nproc) --target llama-server && chown -R $(id -u):$(id -g) /src/build"
 
 mkdir -p "$DIST_DIR"
 cp -a bin/llama-server bin/lib*.so* "$DIST_DIR/"
+chmod 755 "$DIST_DIR"/llama-server "$DIST_DIR"/lib*.so*
+
+# Build-time assertion for permissions
+if [ ! -x "$DIST_DIR/llama-server" ]; then
+    echo "ERROR: llama-server is not executable!"
+    exit 1
+fi
+
 
 echo "Verifying GLIBC ABI compatibility (TARGET: Debian Bookworm / GLIBC <= 2.36)..."
 for bin in "$DIST_DIR/llama-server" "$DIST_DIR"/lib*.so*; do

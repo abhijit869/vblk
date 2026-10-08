@@ -1,2 +1,0 @@
-{"execute": "qmp_capabilities"}
-{"execute": "screendump", "arguments": {"filename": "vm_screen8.ppm"}}
