@@ -1,259 +1,220 @@
+#!/usr/bin/env python3
 import tkinter as tk
-from tkinter import ttk, messagebox
-import time
+from tkinter import ttk
 import subprocess
-import threading
 import json
+import dbus
 
-try:
-    import dbus
-    DBUS_AVAILABLE = True
-except ImportError:
-    DBUS_AVAILABLE = False
-
-BG_COLOR = "#0A0F1C"
-PANEL_BG = "#12182B"
-TEXT_COLOR = "#E2E8F0"
-ACCENT_COLOR = "#0EA5E9"
+# --- THEME COLORS ---
+BG_BASE = "#0B1120"      # Deepest background
+BG_SURFACE = "#0F172A"   # Panel surface
+BG_ELEVATED = "#1E293B"  # Elevated elements
+ACCENT = "#00E5FF"       # Cyan accent
+ACCENT_BLUE = "#3B82F6"  # Blue accent for active states
+TEXT_MAIN = "#FFFFFF"
+TEXT_MUTED = "#94A3B8"
 
 class JarvisTopBar(tk.Toplevel):
-    def __init__(self, master, iface):
+    def __init__(self, master):
         super().__init__(master)
-        self.iface = iface
         self.overrideredirect(True)
         w = self.winfo_screenwidth()
-        self.geometry(f"{w}x24+0+0")
-        self.configure(bg=PANEL_BG)
+        self.geometry(f"{w}x32+0+0")
+        self.configure(bg=BG_BASE)
         self.attributes("-topmost", True)
-        self.attributes("-alpha", 0.85)
 
-        # Left: Branding & Workspaces
-        left_frame = tk.Frame(self, bg=PANEL_BG)
-        left_frame.pack(side=tk.LEFT, padx=10)
-        tk.Label(left_frame, text="JARVIS OS", bg=PANEL_BG, fg=ACCENT_COLOR, font=("Helvetica", 10, "bold")).pack(side=tk.LEFT)
-        tk.Label(left_frame, text=" | 1  2  3  4", bg=PANEL_BG, fg=TEXT_COLOR, font=("Helvetica", 9)).pack(side=tk.LEFT)
+        # Left side
+        left_frame = tk.Frame(self, bg=BG_BASE)
+        left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=10)
+        
+        tk.Label(left_frame, text="⬡ JARVIS OS", fg=TEXT_MAIN, bg=BG_BASE, font=("Helvetica", 10, "bold")).pack(side=tk.LEFT, padx=10)
+        
+        # Desktops
+        for i in range(1, 5):
+            bg = ACCENT_BLUE if i == 1 else BG_BASE
+            tk.Label(left_frame, text=str(i), fg=TEXT_MAIN, bg=bg, width=3).pack(side=tk.LEFT, padx=2)
 
-        # Center: Clock
-        self.clock_lbl = tk.Label(self, text="", bg=PANEL_BG, fg=TEXT_COLOR, font=("Helvetica", 9))
-        self.clock_lbl.pack(side=tk.LEFT, expand=True)
+        # Center
+        center_frame = tk.Frame(self, bg=BG_BASE)
+        center_frame.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+        tk.Label(center_frame, text="Mon, Aug 11, 2025   10:24 AM", fg=TEXT_MAIN, bg=BG_BASE, font=("Helvetica", 9)).pack(expand=True)
 
-        # Right: Tray
-        self.status_lbl = tk.Label(self, text="Status: Checking...", bg=PANEL_BG, fg=TEXT_COLOR, font=("Helvetica", 9))
-        self.status_lbl.pack(side=tk.RIGHT, padx=10)
-
-        self.update_clock()
-        self.update_status()
-
-    def update_clock(self):
-        self.clock_lbl.config(text=time.strftime("%a, %b %d, %Y  %I:%M %p"))
-        self.after(1000, self.update_clock)
-
-    def update_status(self):
-        if self.iface:
-            try:
-                st = self.iface.Status()
-                self.status_lbl.config(text=f"Core: {st}", fg="#10B981")
-            except:
-                self.status_lbl.config(text="Core: Offline", fg="#EF4444")
-        self.after(5000, self.update_status)
+        # Right side
+        right_frame = tk.Frame(self, bg=BG_BASE)
+        right_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10)
+        icons = ["🔍", "🔔", "ᛒ", "📶", "🔊", "🔋 100%"]
+        for ic in icons:
+            tk.Label(right_frame, text=ic, fg=TEXT_MAIN, bg=BG_BASE, font=("Helvetica", 10)).pack(side=tk.LEFT, padx=5)
 
 class JarvisLeftDock(tk.Toplevel):
-    def __init__(self, master, shell_app):
+    def __init__(self, master, toggle_menu_cb):
         super().__init__(master)
-        self.shell_app = shell_app
         self.overrideredirect(True)
-        h = self.winfo_screenheight() - 24
-        self.geometry(f"48x{h}+0+24")
-        self.configure(bg=PANEL_BG)
-        self.attributes("-topmost", True)
-        self.attributes("-alpha", 0.85)
-
-        apps = [
-            ("Home", shell_app.launch_explorer),
-            ("Files", shell_app.launch_explorer),
-            ("Terminal", shell_app.launch_terminal),
-            ("AI", shell_app.toggle_ai),
-            ("Settings", shell_app.launch_settings)
-        ]
-        
-        for name, cmd in apps:
-            btn = tk.Button(self, text=name[:2], bg="#1E293B", fg="white", bd=0, command=cmd)
-            btn.pack(pady=10, padx=4, fill=tk.X)
-            
-        # Grid/Start Menu button at bottom
-        self.start_btn = tk.Button(self, text=":::", bg=ACCENT_COLOR, fg="white", bd=0, font=("Helvetica", 14), command=shell_app.toggle_launcher)
-        self.start_btn.pack(side=tk.BOTTOM, pady=20, fill=tk.X)
-
-class JarvisBottomDock(tk.Toplevel):
-    def __init__(self, master, shell_app):
-        super().__init__(master)
-        self.shell_app = shell_app
-        self.overrideredirect(True)
-        w = 400
-        x = (self.winfo_screenwidth() - w) // 2
-        y = self.winfo_screenheight() - 50
-        self.geometry(f"{w}x40+{x}+{y}")
-        self.configure(bg=PANEL_BG)
-        self.attributes("-topmost", True)
-        self.attributes("-alpha", 0.9)
-
-        apps = [
-            ("Web", shell_app.launch_browser),
-            ("Files", shell_app.launch_explorer),
-            ("Term", shell_app.launch_terminal),
-            ("Code", shell_app.launch_code),
-            ("Settings", shell_app.launch_settings)
-        ]
-        
-        for name, cmd in apps:
-            btn = tk.Button(self, text=name, bg="#1E293B", fg="white", bd=0, command=cmd)
-            btn.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=2, pady=2)
-
-class JarvisAppLauncher(tk.Toplevel):
-    def __init__(self, master, shell_app):
-        super().__init__(master)
-        self.shell_app = shell_app
-        self.overrideredirect(True)
-        w, h = 600, 450
-        x = 55  # Next to left dock
-        y = self.winfo_screenheight() - h - 50
-        self.geometry(f"{w}x{h}+{x}+{y}")
-        self.configure(bg=PANEL_BG)
+        h = self.winfo_screenheight() - 80
+        self.geometry(f"64x{h}+10+40")
+        self.configure(bg=BG_SURFACE)
         self.attributes("-topmost", True)
         self.attributes("-alpha", 0.95)
 
-        # Simple split layout
-        left = tk.Frame(self, bg="#0F172A", width=150)
+        apps = [
+            ("🏠", "Home"),
+            ("📁", "Files"),
+            ("🦊", "Browser"),
+            (">_", "Terminal"),
+            ("🤖", "JARVIS AI"),
+            ("📝", "Code"),
+            ("▶", "Media"),
+            ("📄", "Office"),
+            ("⚙", "Settings")
+        ]
+        
+        for ic, name in apps:
+            btn = tk.Button(self, text=ic, bg=BG_SURFACE, fg=ACCENT, bd=0, font=("Helvetica", 16), activebackground=BG_ELEVATED)
+            btn.pack(pady=10, fill=tk.X)
+
+        self.start_btn = tk.Button(self, text="⠿", bg=BG_SURFACE, fg=TEXT_MAIN, bd=0, font=("Helvetica", 18), command=toggle_menu_cb)
+        self.start_btn.pack(side=tk.BOTTOM, pady=20, fill=tk.X)
+
+class JarvisBottomDock(tk.Toplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.overrideredirect(True)
+        w = 460
+        x = (self.winfo_screenwidth() - w) // 2
+        y = self.winfo_screenheight() - 60
+        self.geometry(f"{w}x48+{x}+{y}")
+        self.configure(bg=BG_SURFACE)
+        self.attributes("-topmost", True)
+        self.attributes("-alpha", 0.95)
+        
+        icons = ["🦊", "📁", ">_", "📝", "🎵", "📄", "⚙", "🗑"]
+        for ic in icons:
+            btn = tk.Button(self, text=ic, bg=BG_SURFACE, fg=TEXT_MAIN, bd=0, font=("Helvetica", 18), activebackground=BG_ELEVATED)
+            btn.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=2, pady=2)
+
+class JarvisAppLauncher(tk.Toplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.overrideredirect(True)
+        w, h = 650, 480
+        x = 84
+        y = self.winfo_screenheight() - h - 60
+        self.geometry(f"{w}x{h}+{x}+{y}")
+        self.configure(bg=BG_BASE)
+        self.attributes("-topmost", True)
+        self.attributes("-alpha", 0.95)
+
+        left = tk.Frame(self, bg=BG_SURFACE, width=180)
         left.pack(side=tk.LEFT, fill=tk.Y)
         left.pack_propagate(False)
         
-        tk.Label(left, text="Favorites", bg="#0F172A", fg="white", font=("Helvetica", 10)).pack(pady=10, anchor="w", padx=10)
-        tk.Label(left, text="All Applications", bg="#0F172A", fg="#94A3B8", font=("Helvetica", 10)).pack(pady=5, anchor="w", padx=10)
+        cats = [
+            ("⭐", "Favorites", ACCENT_BLUE),
+            ("⛶", "All Applications", BG_SURFACE),
+            ("👨‍💻", "Development", BG_SURFACE),
+            ("🌐", "Internet", BG_SURFACE),
+            ("▶", "Multimedia", BG_SURFACE),
+            ("📄", "Office", BG_SURFACE),
+            ("🖥", "System", BG_SURFACE),
+            ("⚙", "Settings", BG_SURFACE),
+            ("🔧", "Utilities", BG_SURFACE),
+            ("🤖", "JARVIS AI", BG_SURFACE)
+        ]
+        
+        for ic, text, bg in cats:
+            btn = tk.Button(left, text=f" {ic}  {text}", bg=bg, fg=TEXT_MAIN, bd=0, anchor="w", font=("Helvetica", 10))
+            btn.pack(fill=tk.X, pady=2)
 
-        right = tk.Frame(self, bg=PANEL_BG)
+        right = tk.Frame(self, bg=BG_BASE)
         right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        search_frame = tk.Frame(right, bg=BG_ELEVATED)
+        search_frame.pack(fill=tk.X, padx=20, pady=20)
+        tk.Label(search_frame, text="🔍 Search apps, files, settings...", bg=BG_ELEVATED, fg=TEXT_MUTED, anchor="w").pack(fill=tk.X, padx=10, pady=8)
 
-        tk.Label(right, text="Search apps...", bg="#1E293B", fg="#94A3B8", anchor="w").pack(fill=tk.X, padx=20, pady=20, ipady=5)
-
-        grid = tk.Frame(right, bg=PANEL_BG)
+        grid = tk.Frame(right, bg=BG_BASE)
         grid.pack(fill=tk.BOTH, expand=True, padx=20)
         
         apps = [
-            ("Firefox", shell_app.launch_browser),
-            ("Files", shell_app.launch_explorer),
-            ("Terminal", shell_app.launch_terminal),
-            ("Settings", shell_app.launch_settings)
+            ("Firefox\nWeb Browser", "🦊"), ("Files\nFile Manager", "📁"), ("Terminal\nCommand Line", ">_"),
+            ("Code\nCode Editor", "📝"), ("JARVIS AI\nLocal Assistant", "🤖"), ("LibreOffice\nOffice Suite", "📄"),
+            ("Settings\nSystem Settings", "⚙"), ("Software\nInstall Software", "👜"), ("Text Editor\nEdit Files", "📝")
         ]
         
-        for i, (name, cmd) in enumerate(apps):
-            btn = tk.Button(grid, text=name, bg="#1E293B", fg="white", bd=0, width=15, height=3, command=cmd)
-            btn.grid(row=i//3, column=i%3, padx=10, pady=10)
+        for i, (name, ic) in enumerate(apps):
+            f = tk.Frame(grid, bg=BG_BASE)
+            f.grid(row=i//3, column=i%3, padx=15, pady=15, sticky="nsew")
+            grid.grid_columnconfigure(i%3, weight=1)
+            
+            tk.Label(f, text=ic, bg=BG_BASE, fg=ACCENT, font=("Helvetica", 24)).pack()
+            tk.Label(f, text=name, bg=BG_BASE, fg=TEXT_MAIN, font=("Helvetica", 9), justify=tk.CENTER).pack()
 
         self.bind("<FocusOut>", lambda e: self.withdraw())
         self.withdraw()
 
 class JarvisWidgets(tk.Toplevel):
-    def __init__(self, master, diag_iface):
+    def __init__(self, master):
         super().__init__(master)
-        self.diag_iface = diag_iface
         self.overrideredirect(True)
-        w = 300
-        h = self.winfo_screenheight() - 100
+        w = 260
+        h = self.winfo_screenheight() - 80
         x = self.winfo_screenwidth() - w - 20
         y = 40
         self.geometry(f"{w}x{h}+{x}+{y}")
-        self.configure(bg=PANEL_BG)
+        self.configure(bg=BG_BASE)
+        # Transparent background trick for toplevel if possible, otherwise use BG_BASE
         self.attributes("-topmost", True)
-        self.attributes("-alpha", 0.9)
-        self.attributes("-transparentcolor", PANEL_BG) # If supported
+        self.attributes("-alpha", 0.95)
 
-        # Stacked widgets
-        self.sys_widget = tk.Frame(self, bg="#1E293B", height=120)
-        self.sys_widget.pack(fill=tk.X, pady=(0, 15))
-        tk.Label(self.sys_widget, text="System Monitor", bg="#1E293B", fg="white").pack(anchor="nw", padx=10, pady=5)
-        self.cpu_lbl = tk.Label(self.sys_widget, text="CPU: --%", bg="#1E293B", fg=ACCENT_COLOR)
-        self.cpu_lbl.pack(pady=5)
-
-        self.ai_widget = tk.Frame(self, bg="#1E293B", height=200)
-        self.ai_widget.pack(fill=tk.X, pady=15)
-        tk.Label(self.ai_widget, text="JARVIS AI (Qwen3)", bg="#1E293B", fg="white").pack(anchor="nw", padx=10, pady=5)
+        # Sys Monitor
+        sys_f = tk.Frame(self, bg=BG_SURFACE)
+        sys_f.pack(fill=tk.X, pady=(0, 15))
+        tk.Label(sys_f, text="↓ System Monitor", bg=BG_SURFACE, fg=TEXT_MUTED, anchor="w").pack(fill=tk.X, padx=10, pady=5)
         
-        self.net_widget = tk.Frame(self, bg="#1E293B", height=100)
-        self.net_widget.pack(fill=tk.X, pady=15)
-        tk.Label(self.net_widget, text="Network", bg="#1E293B", fg="white").pack(anchor="nw", padx=10, pady=5)
-        self.net_lbl = tk.Label(self.net_widget, text="Loading...", bg="#1E293B", fg=ACCENT_COLOR)
-        self.net_lbl.pack(pady=5)
+        sys_rings = tk.Frame(sys_f, bg=BG_SURFACE)
+        sys_rings.pack(fill=tk.X, pady=10)
+        for stat, val in [("CPU", "12%"), ("RAM", "19%"), ("Disk", "18%")]:
+            sf = tk.Frame(sys_rings, bg=BG_SURFACE)
+            sf.pack(side=tk.LEFT, expand=True)
+            tk.Label(sf, text=val, bg=BG_SURFACE, fg=ACCENT, font=("Helvetica", 12, "bold")).pack()
+            tk.Label(sf, text=stat, bg=BG_SURFACE, fg=TEXT_MUTED, font=("Helvetica", 8)).pack()
+            
+        # JARVIS AI
+        ai_f = tk.Frame(self, bg=BG_SURFACE)
+        ai_f.pack(fill=tk.X, pady=15)
+        tk.Label(ai_f, text="🤖 JARVIS AI (Qwen3)\nReady - Local Inference", bg=BG_SURFACE, fg=ACCENT, anchor="w", justify=tk.LEFT).pack(fill=tk.X, padx=10, pady=10)
+        
+        for action in ["💬 Chat with JARVIS", "✨ Create Code", "📄 Analyze Files", "🖼 Generate Images", "🌐 Browse the Web"]:
+            tk.Label(ai_f, text=f"{action}  >", bg=BG_ELEVATED, fg=TEXT_MAIN, anchor="w").pack(fill=tk.X, padx=10, pady=2, ipady=4)
 
-        self.update_widgets()
+        # Network
+        net_f = tk.Frame(self, bg=BG_SURFACE)
+        net_f.pack(fill=tk.X, pady=15)
+        tk.Label(net_f, text="⊕ Network", bg=BG_SURFACE, fg=TEXT_MUTED, anchor="w").pack(fill=tk.X, padx=10, pady=5)
+        nf = tk.Frame(net_f, bg=BG_SURFACE)
+        nf.pack(fill=tk.X, padx=10, pady=5)
+        tk.Label(nf, text="Download\n125 KB/s", bg=BG_SURFACE, fg=TEXT_MAIN, justify=tk.LEFT).pack(side=tk.LEFT, expand=True)
+        tk.Label(nf, text="Upload\n48 KB/s", bg=BG_SURFACE, fg=TEXT_MAIN, justify=tk.LEFT).pack(side=tk.RIGHT, expand=True)
 
-    def update_widgets(self):
-        if self.diag_iface:
-            try:
-                res_sys = json.loads(self.diag_iface.GetSystem())
-                if res_sys.get("status") == "ok":
-                    cpu = res_sys["data"].get("cpu", "").split("\\n")[0]
-                    self.cpu_lbl.config(text=cpu[:30])
-                    
-                res_net = json.loads(self.diag_iface.GetNetwork())
-                if res_net.get("status") == "ok":
-                    net = res_net["data"].get("interfaces", "").split("\\n")[0]
-                    self.net_lbl.config(text=net[:30])
-            except:
-                pass
-        self.after(5000, self.update_widgets)
+        # Storage
+        stor_f = tk.Frame(self, bg=BG_SURFACE)
+        stor_f.pack(fill=tk.X, pady=15)
+        tk.Label(stor_f, text="⛁ Storage", bg=BG_SURFACE, fg=TEXT_MUTED, anchor="w").pack(fill=tk.X, padx=10, pady=5)
+        tk.Label(stor_f, text="Root (/)              23 GB / 100 GB", bg=BG_SURFACE, fg=TEXT_MAIN, font=("Helvetica", 9)).pack(anchor="w", padx=10)
+        tk.Label(stor_f, text="Data (/home)        120 GB / 500 GB", bg=BG_SURFACE, fg=TEXT_MAIN, font=("Helvetica", 9)).pack(anchor="w", padx=10, pady=(5,0))
 
-class JarvisShell(tk.Tk):
+class JarvisDesktopApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.withdraw()
         
-        self.bus = None
-        self.jarvis_iface = None
-        self.diag_iface = None
-        
-        if DBUS_AVAILABLE:
-            try:
-                self.bus = dbus.SystemBus()
-                proxy = self.bus.get_object("com.jarvis.Core", "/com/jarvis/Core")
-                self.jarvis_iface = dbus.Interface(proxy, "com.jarvis.CoreInterface")
-                
-                dproxy = self.bus.get_object("com.jarvis.Core", "/com/jarvis/Diagnostics")
-                self.diag_iface = dbus.Interface(dproxy, "com.jarvis.DiagnosticsInterface")
-            except Exception:
-                pass
+        self.top_bar = JarvisTopBar(self)
+        self.launcher = JarvisAppLauncher(self)
+        self.left_dock = JarvisLeftDock(self, self.toggle_menu)
+        self.bottom_dock = JarvisBottomDock(self)
+        self.widgets = JarvisWidgets(self)
 
-        self.top_bar = JarvisTopBar(self, self.jarvis_iface)
-        self.left_dock = JarvisLeftDock(self, self)
-        self.bottom_dock = JarvisBottomDock(self, self)
-        self.launcher = JarvisAppLauncher(self, self)
-        self.widgets = JarvisWidgets(self, self.diag_iface)
-
-    def launch_explorer(self):
-        self.launcher.withdraw()
-        subprocess.Popen(["/usr/bin/python3", "/opt/jarvis/desktop/file_explorer.py"])
-
-    def launch_terminal(self):
-        self.launcher.withdraw()
-        subprocess.Popen(["x-terminal-emulator"])
-
-    def launch_settings(self):
-        self.launcher.withdraw()
-        subprocess.Popen(["/usr/bin/python3", "/opt/jarvis/desktop/jarvis_panel.py"])
-
-    def launch_browser(self):
-        self.launcher.withdraw()
-        subprocess.Popen(["firefox"])
-
-    def launch_code(self):
-        self.launcher.withdraw()
-        subprocess.Popen(["code"])
-
-    def toggle_ai(self):
-        self.launcher.withdraw()
-        # Trigger JARVIS AI command surface if implemented separately
-        pass
-
-    def toggle_launcher(self):
+    def toggle_menu(self):
         if self.launcher.winfo_ismapped():
             self.launcher.withdraw()
         else:
@@ -261,5 +222,5 @@ class JarvisShell(tk.Tk):
             self.launcher.focus_force()
 
 if __name__ == "__main__":
-    app = JarvisShell()
+    app = JarvisDesktopApp()
     app.mainloop()
