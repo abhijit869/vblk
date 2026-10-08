@@ -1,6 +1,6 @@
 # JARVIS OS
 
-### 💿 **Download the JARVIS OS 1.0 ISO Here!**
+### 💿 **[Download the JARVIS OS 1.0 ISO Here!](https://github.com/abhijit869/vblk/releases/latest)**
 
 ![JARVIS OS Futuristic Desktop Showcase](images/jarvis_showcase.jpeg)
 
