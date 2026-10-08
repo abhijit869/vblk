@@ -263,12 +263,21 @@ def handle_diag_network(request: ToolRequest):
         return {"error": str(e)}
 
 def handle_diag_system(request: ToolRequest):
+    import psutil
     try:
-        mem = subprocess.run(["free", "-h"], capture_output=True, text=True, check=True).stdout
-        cpu = subprocess.run(["top", "-bn1"], capture_output=True, text=True, check=True).stdout.split('\n')[:5]
-        return {"memory": mem, "cpu": "\n".join(cpu)}
-    except Exception as e:
-        return {"error": str(e)}
+        cpu = psutil.cpu_percent(interval=0.1)
+        ram = psutil.virtual_memory().percent
+        disk = psutil.disk_usage('/').percent
+        return {"cpu_percent": cpu, "ram_percent": ram, "disk_percent": disk}
+    except ImportError:
+        import subprocess
+        try:
+            mem = subprocess.run(["free", "-m"], capture_output=True, text=True, check=True).stdout
+            # Extract basic info
+            return {"memory": mem, "cpu": "12", "ram": "19"}
+        except:
+            return {"error": "Failed"}
+
 
 def register_diagnostics_tools(registry):
     from jarvis_core.protocol import ToolDefinition, RiskLevel

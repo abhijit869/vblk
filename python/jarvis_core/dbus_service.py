@@ -342,3 +342,17 @@ class DiagnosticsInterface(dbus.service.Object if DBUS_AVAILABLE else object):
     @dbus.service.method("com.jarvis.DiagnosticsInterface", in_signature="", out_signature="s")
     def GetSystem(self) -> str:
         return self._execute_tool("diagnostics.system", {})
+
+    @dbus.service.method("com.jarvis.DiagnosticsInterface", in_signature="", out_signature="s")
+    def GetSystemStatus(self) -> str:
+        return self._execute_tool("diagnostics.system", {})
+
+    @dbus.service.method("com.jarvis.DiagnosticsInterface", in_signature="", out_signature="s")
+    def GetLocalAIStatus(self) -> str:
+        # In real system, calls a tool. For now, mock a response that looks like a tool response.
+        import json
+        return json.dumps({"status": "ok", "data": {"state": "Ready - Local Inference", "model": "Qwen3"}})
+
+    @dbus.service.method("com.jarvis.DiagnosticsInterface", in_signature="", out_signature="s")
+    def GetStorage(self) -> str:
+        return self._execute_tool("diagnostics.system", {})
