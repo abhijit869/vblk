@@ -180,15 +180,16 @@ class PathGuard:
         except Exception:
             return False, "RESOLVE_ERROR"
             
-        if ai_tool_path:
-            try:
-                home = Path.home().resolve()
-                if resolved.is_relative_to(home / ".ssh"):
-                    return False, "AI_READ_DENIED_SSH"
-            except Exception:
-                pass
+        try:
+            if is_sensitive_path(str(path)) or is_sensitive_path(str(resolved)):
+                return False, "SENSITIVE_PATH_DENIED"
                 
-        # Kernel enforces read, so we allow reads from Tier 2 GUI
+            text = str(resolved) + ("/" if resolved.is_dir() else "")
+            if any(text.startswith(prefix) for prefix in BLOCKED_PREFIXES):
+                return False, "PSEUDO_FS_DENIED"
+        except Exception:
+            return False, "EVALUATION_ERROR"
+
         return True, "ALLOW_READ"
 
     @staticmethod
@@ -198,12 +199,18 @@ class PathGuard:
             return False, reason
             
         try:
-            # We use strict=False because we might be writing a new file
             resolved = p.resolve(strict=False)
         except Exception:
             return False, "RESOLVE_ERROR"
             
         try:
+            if is_sensitive_path(str(path)) or is_sensitive_path(str(resolved)):
+                return False, "SENSITIVE_PATH_DENIED"
+                
+            text = str(resolved) + ("/" if resolved.is_dir() else "")
+            if any(text.startswith(prefix) for prefix in BLOCKED_PREFIXES):
+                return False, "PSEUDO_FS_DENIED"
+
             req_norm = Path(os.path.abspath(p))
             req_tier2 = _is_tier2(req_norm)
             res_tier2 = _is_tier2(resolved)
