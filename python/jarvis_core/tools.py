@@ -301,6 +301,10 @@ def register_diagnostics_tools(registry):
 
 def build_default_registry() -> ToolRegistry:
     registry = ToolRegistry()
+    from jarvis_core.store_backend import register_package_tools
+    from jarvis_core.flatpak_tools import register_flatpak_tools
+    register_package_tools(registry)
+    register_flatpak_tools(registry)
     registry.register(
         ToolDefinition(
             "system.info",

@@ -53,6 +53,9 @@ mkdir -p config/includes.chroot/usr/local/lib
 cp ../downloads/models/Qwen3-1.7B-Q4_K_M.gguf config/includes.chroot/usr/lib/jarvis/models/emergency/
 cp ../dist/llama.cpp/llama-server config/includes.chroot/usr/local/bin/
 cp -a ../dist/llama.cpp/lib*.so* config/includes.chroot/usr/local/lib/
+
+mkdir -p config/includes.chroot/etc/ld.so.conf.d
+echo "/usr/local/lib" > config/includes.chroot/etc/ld.so.conf.d/jarvis.conf
 cp ../config/local-ai/jarvis-local-ai.env config/includes.chroot/etc/jarvis/local-ai.env
 cp ../scripts/local-ai-lifecycle.sh config/includes.chroot/usr/lib/jarvis/scripts/
 chmod +x config/includes.chroot/usr/lib/jarvis/scripts/local-ai-lifecycle.sh
@@ -95,6 +98,10 @@ cp /opt/jarvis/desktop/jarvis-files.desktop /usr/share/applications/
 chmod 644 /usr/share/applications/jarvis-files.desktop
 cp /opt/jarvis/desktop/icons/jarvis-files.svg /usr/share/pixmaps/
 chmod 644 /usr/share/pixmaps/jarvis-files.svg
+
+cp /opt/jarvis/desktop/jarvis-store.desktop /usr/share/applications/
+chmod 644 /usr/share/applications/jarvis-store.desktop
+
 su - jarvis -c "xdg-mime default jarvis-files.desktop inode/directory"
 xdg-mime default jarvis-files.desktop inode/directory
 HOOK

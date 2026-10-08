@@ -47,3 +47,11 @@ cache/
 *.orig
 *.gguf
 llama-server
+
+# Temp files
+.archive_extract/
+zip_files.txt
+current_files.txt
+patch.py
+vm_screen*
+

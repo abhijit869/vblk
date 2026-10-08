@@ -99,6 +99,7 @@ def start_dbus_service(core: JarvisCore) -> None:
     files_service = FilesInterface(core, bus)
     wallpaper_service = WallpaperInterface(core, bus)
     diagnostics_service = DiagnosticsInterface(core, bus)
+    store_service = StoreInterface(core, bus)
     logger.info(f"JARVIS D-Bus Service running on {bus_name}")
 
     from gi.repository import GLib
@@ -378,3 +379,59 @@ class DiagnosticsInterface(dbus.service.Object if DBUS_AVAILABLE else object):
     def SwitchWorkspace(self, workspace_id: int) -> str:
         import json
         return json.dumps({"status": "ok", "data": True})
+
+
+class StoreInterface(dbus.service.Object if DBUS_AVAILABLE else object):
+    def __init__(self, core, bus, object_path="/com/jarvis/Store"):
+        self.core = core
+        if DBUS_AVAILABLE and bus:
+            super().__init__(bus, object_path)
+            
+    def _execute_tool(self, tool_name: str, args: dict, authorized: bool = False) -> str:
+        import json
+        from jarvis_core.protocol import ToolRequest, RiskLevel
+        req = ToolRequest(tool=tool_name, arguments=args)
+        if authorized:
+            object.__setattr__(req, 'max_risk', RiskLevel.HIGH)
+            object.__setattr__(req, 'authorized', True)
+        else:
+            object.__setattr__(req, 'max_risk', RiskLevel.READ)
+        try:
+            res = self.core._tools.execute(req)
+            if res.error:
+                return json.dumps({"status": "error", "message": res.error.message})
+            return json.dumps({"status": "ok", "data": res.data})
+        except Exception as e:
+            return json.dumps({"status": "error", "message": str(e)})
+
+    @dbus.service.method("com.jarvis.StoreInterface", in_signature="s", out_signature="s")
+    def Search(self, query: str) -> str:
+        return self._execute_tool("package.search", {"query": query})
+
+    @dbus.service.method("com.jarvis.StoreInterface", in_signature="s", out_signature="s")
+    def Install(self, package: str) -> str:
+        return self._execute_tool("package.install", {"package": package}, authorized=True)
+
+    @dbus.service.method("com.jarvis.StoreInterface", in_signature="s", out_signature="s")
+    def InstallUnauthorized(self, package: str) -> str:
+        return self._execute_tool("package.install", {"package": package}, authorized=False)
+
+    @dbus.service.method("com.jarvis.StoreInterface", in_signature="s", out_signature="s")
+    def Remove(self, package: str) -> str:
+        return self._execute_tool("package.remove", {"package": package}, authorized=True)
+
+    @dbus.service.method("com.jarvis.StoreInterface", in_signature="s", out_signature="s")
+    def SearchFlatpak(self, query: str) -> str:
+        return self._execute_tool("flatpak.search", {"query": query})
+
+    @dbus.service.method("com.jarvis.StoreInterface", in_signature="s", out_signature="s")
+    def InstallFlatpak(self, application_id: str) -> str:
+        return self._execute_tool("flatpak.install", {"application_id": application_id}, authorized=True)
+
+    @dbus.service.method("com.jarvis.StoreInterface", in_signature="s", out_signature="s")
+    def RemoveFlatpak(self, application_id: str) -> str:
+        return self._execute_tool("flatpak.remove", {"application_id": application_id}, authorized=True)
+
+    @dbus.service.method("com.jarvis.StoreInterface", in_signature="s", out_signature="s")
+    def InfoFlatpak(self, application_id: str) -> str:
+        return self._execute_tool("flatpak.info", {"application_id": application_id})

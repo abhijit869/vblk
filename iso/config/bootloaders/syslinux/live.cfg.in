@@ -1,0 +1,42 @@
+label live-@FLAVOUR@
+	menu label ^Start JARVIS OS Live
+	menu default
+	linux @LINUX@
+	initrd @INITRD@
+	append @APPEND_LIVE@
+
+label live-install
+	menu label ^Install JARVIS OS
+	linux @LINUX@
+	initrd @INITRD@
+	append @APPEND_LIVE@ jarvis.installer=1
+
+label live-safe
+	menu label Install JARVIS OS — ^Safe Graphics
+	linux @LINUX@
+	initrd @INITRD@
+	append @APPEND_LIVE@ nomodeset xforcevesa jarvis.installer=1
+
+label live-oem
+	menu label JARVIS OS — ^OEM / Factory Setup
+	linux @LINUX@
+	initrd @INITRD@
+	append @APPEND_LIVE@ jarvis.oem=1
+
+label live-recovery
+	menu label JARVIS OS — ^Rescue & Recovery
+	linux @LINUX@
+	initrd @INITRD@
+	append @APPEND_LIVE@ jarvis.recovery=1
+
+label live-diagnostics
+	menu label JARVIS OS — ^Hardware Diagnostics
+	linux @LINUX@
+	initrd @INITRD@
+	append @APPEND_LIVE@ jarvis.diagnostics=1
+
+label live-verify
+	menu label JARVIS OS — ^Verify Installation Media
+	linux @LINUX@
+	initrd @INITRD@
+	append @APPEND_LIVE@ verify-checksums
