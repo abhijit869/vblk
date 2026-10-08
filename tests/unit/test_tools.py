@@ -98,14 +98,9 @@ class ToolRegistryTests(unittest.TestCase):
         self.assertIn("logs", result.data)
 
     def test_security_block_ip(self) -> None:
-        result = build_default_registry().execute(
-            ToolRequest(
-                tool="security.block_ip",
-                arguments={"ip_address": "192.168.1.100"},
-                max_risk=RiskLevel.HIGH,
-                authorized=True,
-            )
-        )
+        req = ToolRequest(tool="security.block_ip", arguments={"ip_address": "192.168.1.100"}, max_risk=RiskLevel.HIGH)
+        object.__setattr__(req, "authorized", True)
+        result = build_default_registry().execute(req)
         self.assertEqual(result.status, "ok")
         self.assertEqual(result.data["ip_address"], "192.168.1.100")
 
@@ -123,20 +118,14 @@ class ToolRegistryTests(unittest.TestCase):
                 tool="gui.click",
                 arguments={"x": 100, "y": 200},
                 max_risk=RiskLevel.MEDIUM,
-                authorized=True,
             )
         )
-        self.assertEqual(result.status, "ok")
+        self.assertEqual(result.status, "denied")
 
     def test_gui_type(self) -> None:
-        result = build_default_registry().execute(
-            ToolRequest(
-                tool="gui.type",
-                arguments={"text": "hello"},
-                max_risk=RiskLevel.MEDIUM,
-                authorized=True,
-            )
-        )
+        req = ToolRequest(tool="gui.type", arguments={"text": "hello"}, max_risk=RiskLevel.MEDIUM)
+        object.__setattr__(req, "authorized", True)
+        result = build_default_registry().execute(req)
         self.assertEqual(result.status, "ok")
 
 

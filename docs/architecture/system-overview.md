@@ -53,3 +53,9 @@ The Knowledge Engine and System Twin store summarized system state. The AI queri
 ## Distribution Flow
 
 The authoritative build pipeline is `scripts/build/build-iso.sh` which dynamically downloads the Debian base, injects JARVIS, compiles the local inference engine (llama.cpp pinned b11429), and packages everything into an installable ISO.
+
+### File Manager Control Flow
+- The File Manager GUI runs in unprivileged user space. 
+- For local filesystem interactions, the GUI uses D-Bus to communicate with `com.jarvis.Core`.
+- D-Bus requests route through `FileService` and `PathGuard` to enforce Tier 1 constraints.
+- Any direct tools invoked by the AI route through the `Tool Registry` -> `Policy` subsystem.

@@ -32,3 +32,8 @@ grub-pc-bin
 grub-common
 isolinux
 syslinux-common
+xdg-utils
+shared-mime-info
+libglib2.0-bin
+python3-gi
+curl

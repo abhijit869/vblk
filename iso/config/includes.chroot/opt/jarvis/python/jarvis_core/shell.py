@@ -32,13 +32,13 @@ class JarvisShell(cmd.Cmd):
             # Wait, core.handle_text does the single/multi-tool execution.
             response = self.core.handle_text(line, self.session_id)
             self.session_id = response.get("session_id")
-            
+
             print(f"\n{response.get('answer')}\n")
-            
+
             if response.get("selected_tools"):
                 tools = ", ".join(response["selected_tools"])
                 print(f"[Tools used: {tools}]")
-                
+
         except Exception as e:
             print(f"[Error: {e}]")
 
@@ -63,6 +63,7 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\nGoodbye.")
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

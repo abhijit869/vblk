@@ -5,11 +5,26 @@ systemctl enable jarvis-eventbus.service
 systemctl enable zramswap.service
 
 # 2. Setup Jarvis user and GUI autologin
-useradd -m -s /bin/bash jarvis
+id -u jarvis >/dev/null 2>&1 || useradd -m -s /bin/bash jarvis
 chown -R jarvis:jarvis /opt/jarvis
+# Create log and lib directories for jarvis
+mkdir -p /var/log/jarvis /var/lib/jarvis
+chown -R jarvis:jarvis /var/log/jarvis /var/lib/jarvis
 
 # 3. Precompile Python to bytecode for faster startup and lower RAM usage
 python3 -m compileall /opt/jarvis/python/jarvis_core
 
 # 4. Limit malloc arenas for JARVIS daemon to reduce memory fragmentation footprint
 sed -i 's/Environment="JARVIS_AI_PROVIDER/Environment="MALLOC_ARENA_MAX=2"\nEnvironment="JARVIS_AI_PROVIDER/g' /etc/systemd/system/jarvis-core.service
+
+# 5. Install Desktop Application Icon
+mkdir -p /usr/share/applications
+cp /opt/jarvis/desktop/jarvis-panel.desktop /usr/share/applications/
+chmod 644 /usr/share/applications/jarvis-panel.desktop
+mkdir -p /usr/share/pixmaps
+cp /opt/jarvis/desktop/jarvis-files.desktop /usr/share/applications/
+chmod 644 /usr/share/applications/jarvis-files.desktop
+cp /opt/jarvis/desktop/icons/jarvis-files.svg /usr/share/pixmaps/
+chmod 644 /usr/share/pixmaps/jarvis-files.svg
+su - jarvis -c "xdg-mime default jarvis-files.desktop inode/directory"
+xdg-mime default jarvis-files.desktop inode/directory

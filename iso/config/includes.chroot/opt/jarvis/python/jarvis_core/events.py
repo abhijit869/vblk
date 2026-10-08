@@ -6,12 +6,13 @@ and background security scanning (Milestone 6).
 
 from __future__ import annotations
 
-import time
 import threading
+import time
 import uuid
-from dataclasses import dataclass, field
-from typing import Any, Callable
 from collections import defaultdict
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -52,7 +53,9 @@ class EventBus:
             if self._running:
                 return
             self._running = True
-            self._worker_thread = threading.Thread(target=self._process_events, daemon=True, name="JarvisEventBus")
+            self._worker_thread = threading.Thread(
+                target=self._process_events, daemon=True, name="JarvisEventBus"
+            )
             self._worker_thread.start()
 
     def stop(self) -> None:
@@ -68,10 +71,10 @@ class EventBus:
             with self._condition:
                 while self._running and not self._queue:
                     self._condition.wait()
-                
+
                 if not self._running and not self._queue:
                     break
-                    
+
                 event = self._queue.pop(0)
 
             # Dispatch outside the lock to prevent deadlocks if handlers publish

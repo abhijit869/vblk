@@ -8,6 +8,7 @@ The underlying foundation is robust Linux, while the user-facing interface is pr
 
 - **Debian 12 (Bookworm) / Linux Foundation** [IMPLEMENTED]
 - **Desktop Environment (MacTahoe / Openbox)** [PARTIALLY IMPLEMENTED / IN DEVELOPMENT]
+- **Wallpaper System (Daemon, Library, D-Bus UI)** [IMPLEMENTED]
 - **File Manager** [PLANNED]
 - **Applications & Launcher** [PLANNED]
 - **Navigation & Settings** [PLANNED]

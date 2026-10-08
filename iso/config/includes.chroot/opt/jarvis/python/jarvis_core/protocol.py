@@ -40,7 +40,7 @@ class ToolRequest:
     caller: str = "jarvis-core"
     request_id: str = field(default_factory=lambda: f"req_{uuid4().hex}")
     max_risk: RiskLevel = RiskLevel.READ
-    authorized: bool = False
+    authorized: bool = field(default=False, init=False)
     timeout_ms: int | None = None
 
 

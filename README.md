@@ -39,6 +39,7 @@ JARVIS monitors the system proactively.
 The desktop experience is being fundamentally rebuilt.
 - **Current Status:** Foundation / In Development.
 - **MacTahoe UI:** A highly optimized desktop environment leveraging Openbox and Plank to maximize resources for the AI layer.
+- **Wallpaper System:** A fully integrated wallpaper daemon, library, and settings panel, with `jarvis-default` defining the core visual identity.
 
 ### 6. The OS Build System
 The authoritative production build path is powered by Debian `live-build`.

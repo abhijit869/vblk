@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=JARVIS Files
+Comment=File Manager for JARVIS OS
+Exec=python3 /opt/jarvis/desktop/file_explorer.py
+Icon=/usr/share/pixmaps/jarvis-files.svg
+Terminal=false
+Type=Application
+Categories=System;Utility;Core;
+MimeType=inode/directory;

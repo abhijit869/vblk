@@ -467,6 +467,56 @@ def build_default_registry() -> ToolRegistry:
         ),
         gui_type,
     )
+    registry.register(
+        ToolDefinition(
+            "file.list", 1, RiskLevel.READ, False, 2000, 32768,
+            "List directory contents",
+            {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}
+        ), _handle_file_list
+    )
+    registry.register(
+        ToolDefinition(
+            "file.stat", 1, RiskLevel.READ, False, 2000, 32768,
+            "Get file metadata",
+            {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}
+        ), _handle_file_stat
+    )
+    registry.register(
+        ToolDefinition(
+            "file.mkdir", 1, RiskLevel.LOW, True, 2000, 32768,
+            "Create a directory",
+            {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}
+        ), _handle_file_mkdir
+    )
+    registry.register(
+        ToolDefinition(
+            "file.copy", 1, RiskLevel.LOW, True, 2000, 32768,
+            "Copy a file or directory",
+            {"type": "object", "properties": {"src": {"type": "string"}, "dst": {"type": "string"}}, "required": ["src", "dst"], "additionalProperties": False}
+        ), _handle_file_copy
+    )
+    registry.register(
+        ToolDefinition(
+            "file.rename", 1, RiskLevel.MEDIUM, True, 2000, 32768,
+            "Rename a file or directory",
+            {"type": "object", "properties": {"src": {"type": "string"}, "name": {"type": "string"}}, "required": ["src", "name"], "additionalProperties": False}
+        ), _handle_file_rename
+    )
+    registry.register(
+        ToolDefinition(
+            "file.move", 1, RiskLevel.MEDIUM, True, 2000, 32768,
+            "Move a file or directory",
+            {"type": "object", "properties": {"src": {"type": "string"}, "dst": {"type": "string"}}, "required": ["src", "dst"], "additionalProperties": False}
+        ), _handle_file_move
+    )
+    registry.register(
+        ToolDefinition(
+            "file.trash", 1, RiskLevel.MEDIUM, True, 2000, 32768,
+            "Move a file to trash",
+            {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}
+        ), _handle_file_trash
+    )
+    register_wallpaper_tools(registry)
     return registry
 
 
@@ -683,6 +733,9 @@ def network_status(_: ToolRequest) -> dict[str, Any]:
 
 
 def file_read(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.pathguard import PathGuard
+    ok, reason = PathGuard.check_read(request.arguments["path"], ai_tool_path=True)
+    if not ok: return {"path": request.arguments["path"], "error": reason}
     path = Path(request.arguments["path"]).resolve()
     try:
         content = path.read_text(encoding="utf-8")
@@ -694,6 +747,9 @@ def file_read(request: ToolRequest) -> dict[str, Any]:
 
 
 def file_search(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.pathguard import PathGuard
+    ok, reason = PathGuard.check_read(request.arguments["path"], ai_tool_path=True)
+    if not ok: return {"path": request.arguments["path"], "error": reason}
     path = Path(request.arguments.get("path", ".")).resolve()
     pattern = request.arguments["pattern"]
     if not path.is_dir():
@@ -976,3 +1032,166 @@ def validate_arguments(schema: dict[str, Any], arguments: dict[str, Any]) -> Non
         is_bool_for_number = isinstance(value, bool) and "boolean" not in allowed
         if not isinstance(value, python_types) or is_bool_for_number:
             raise ValueError(f"argument {name} must be of type {' or '.join(allowed)}")
+
+
+def _handle_file_list(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.list_dir(request.arguments["path"])
+
+def _handle_file_stat(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.stat(request.arguments["path"])
+
+def _handle_file_mkdir(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.mkdir(request.arguments["path"])
+
+def _handle_file_copy(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.copy(request.arguments["src"], request.arguments["dst"])
+
+def _handle_file_rename(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.rename(request.arguments["src"], request.arguments["name"])
+
+def _handle_file_move(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.move(request.arguments["src"], request.arguments["dst"])
+
+def _handle_file_trash(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.trash(request.arguments["path"])
+
+
+WALLPAPER_SET_PARAMETERS = {
+    "type": "object",
+    "required": ["id"],
+    "properties": {
+        "id": {"type": "string", "description": "ID of the wallpaper to set."},
+    },
+    "additionalProperties": False,
+}
+
+WALLPAPER_ADD_PARAMETERS = {
+    "type": "object",
+    "required": ["source_path", "name"],
+    "properties": {
+        "source_path": {"type": "string", "description": "Absolute path to the image file to add."},
+        "name": {"type": "string", "description": "Name for the wallpaper."},
+    },
+    "additionalProperties": False,
+}
+
+WALLPAPER_REMOVE_PARAMETERS = {
+    "type": "object",
+    "required": ["id"],
+    "properties": {
+        "id": {"type": "string", "description": "ID of the wallpaper to remove."},
+    },
+    "additionalProperties": False,
+}
+
+WALLPAPER_FAVORITE_PARAMETERS = {
+    "type": "object",
+    "required": ["id", "favorite"],
+    "properties": {
+        "id": {"type": "string", "description": "ID of the wallpaper."},
+        "favorite": {"type": "boolean", "description": "True to favorite, False to unfavorite."},
+    },
+    "additionalProperties": False,
+}
+
+def register_wallpaper_tools(registry: ToolRegistry) -> None:
+    def _call_dbus(method: str, *args) -> Any:
+        import dbus
+        bus = dbus.SystemBus()
+        proxy = bus.get_object("com.jarvis.Core", "/com/jarvis/Wallpaper")
+        iface = dbus.Interface(proxy, "com.jarvis.WallpaperInterface")
+        return getattr(iface, method)(*args)
+
+    def handle_list(request: ToolRequest):
+        import json
+        return json.loads(_call_dbus("GetAll"))
+        
+    def handle_get_current(request: ToolRequest):
+        import json
+        return json.loads(_call_dbus("GetCurrent"))
+
+    def handle_set(request: ToolRequest):
+        wid = request.arguments["id"]
+        return {"success": bool(_call_dbus("SetCurrent", wid))}
+
+    def handle_add(request: ToolRequest):
+        import json
+        path = request.arguments["source_path"]
+        name = request.arguments["name"]
+        return json.loads(_call_dbus("AddWallpaper", path, name))
+
+    def handle_remove(request: ToolRequest):
+        wid = request.arguments["id"]
+        return {"success": bool(_call_dbus("RemoveWallpaper", wid))}
+
+    def handle_favorite(request: ToolRequest):
+        wid = request.arguments["id"]
+        fav = request.arguments["favorite"]
+        return {"success": bool(_call_dbus("SetFavorite", wid, fav))}
+
+    def handle_reset_default(request: ToolRequest):
+        return {"success": bool(_call_dbus("ResetDefault"))}
+
+    registry.register(
+        ToolDefinition(
+            "wallpaper.list", 1, RiskLevel.READ, False, 2000, 65536,
+            "List available wallpapers.",
+            {"type": "object", "properties": {}, "additionalProperties": False}
+        ),
+        handle_list
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.get_current", 1, RiskLevel.READ, False, 2000, 65536,
+            "Get the currently active wallpaper.",
+            {"type": "object", "properties": {}, "additionalProperties": False}
+        ),
+        handle_get_current
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.set", 1, RiskLevel.LOW, True, 2000, 1024,
+            "Set the desktop wallpaper.",
+            WALLPAPER_SET_PARAMETERS
+        ),
+        handle_set
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.add", 1, RiskLevel.MEDIUM, True, 5000, 10240,
+            "Import an image into the wallpaper library.",
+            WALLPAPER_ADD_PARAMETERS
+        ),
+        handle_add
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.remove", 1, RiskLevel.MEDIUM, True, 2000, 1024,
+            "Delete a user wallpaper from the library.",
+            WALLPAPER_REMOVE_PARAMETERS
+        ),
+        handle_remove
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.favorite", 1, RiskLevel.LOW, True, 2000, 1024,
+            "Mark or unmark a wallpaper as favorite.",
+            WALLPAPER_FAVORITE_PARAMETERS
+        ),
+        handle_favorite
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.reset_default", 1, RiskLevel.LOW, True, 2000, 1024,
+            "Restore the JARVIS Default wallpaper.",
+            {"type": "object", "properties": {}, "additionalProperties": False}
+        ),
+        handle_reset_default
+    )

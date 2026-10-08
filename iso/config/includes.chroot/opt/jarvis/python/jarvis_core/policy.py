@@ -20,7 +20,9 @@ class PolicyEngine:
     until explicit authorization and rollback foundations exist.
     """
 
-    def authorize(self, request: ToolRequest, definition: ToolDefinition) -> PolicyDecision:
+    def authorize(
+        self, request: ToolRequest, definition: ToolDefinition
+    ) -> PolicyDecision:
         if definition.risk > request.max_risk:
             return PolicyDecision(
                 allowed=False,
