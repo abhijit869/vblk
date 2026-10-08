@@ -26,7 +26,7 @@ class JarvisControlPanel(tk.Tk):
             return
             
         try:
-            self.bus = dbus.SessionBus()
+            self.bus = dbus.SystemBus()
             proxy = self.bus.get_object("com.jarvis.Core", "/com/jarvis/Core")
             self.jarvis_iface = dbus.Interface(proxy, "com.jarvis.CoreInterface")
             status = self.jarvis_iface.Status()
