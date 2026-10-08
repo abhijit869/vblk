@@ -27,10 +27,23 @@ fi
 mkdir -p build
 cd build
 
-cmake .. -DGGML_CUDA=OFF -DGGML_VULKAN=OFF -DGGML_METAL=OFF -DGGML_NATIVE=OFF -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release -j2 --target llama-server
+echo "Building llama.cpp in debian:bookworm container to match ISO glibc..."
+docker run --rm \
+    -v "$BUILD_DIR:/src" \
+    -w /src/build \
+    debian:bookworm bash -c "apt-get update && apt-get install -y build-essential cmake git && cmake .. -DGGML_CUDA=OFF -DGGML_VULKAN=OFF -DGGML_METAL=OFF -DGGML_NATIVE=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build . --config Release -j\$(nproc) --target llama-server && chown -R $(id -u):$(id -g) /src/build"
 
 mkdir -p "$DIST_DIR"
 cp -a bin/llama-server bin/lib*.so* "$DIST_DIR/"
+
+echo "Verifying GLIBC ABI compatibility (TARGET: Debian Bookworm / GLIBC <= 2.36)..."
+for bin in "$DIST_DIR/llama-server" "$DIST_DIR"/lib*.so*; do
+    if objdump -T "$bin" 2>/dev/null | grep -qE 'GLIBC_2\.(3[7-9]|[4-9][0-9])'; then
+        echo "ERROR: $bin requires an unsupported GLIBC version! (Found > 2.36)"
+        objdump -T "$bin" | grep -E 'GLIBC_2\.(3[7-9]|[4-9][0-9])'
+        exit 1
+    fi
+done
+echo "GLIBC ABI verification passed."
 
 echo "llama.cpp CPU runtime built successfully."
