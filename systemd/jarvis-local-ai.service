@@ -16,6 +16,7 @@ ExecStart=/usr/local/bin/llama-server \
     -np ${JARVIS_LOCAL_AI_PARALLEL} \
     -ngl ${JARVIS_LOCAL_AI_GPU_LAYERS}
 
+ExecStartPost=/usr/bin/timeout 60 sh -c 'until curl -sf http://127.0.0.1:8081/health >/dev/null; do sleep 1; done'
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true
