@@ -356,3 +356,25 @@ class DiagnosticsInterface(dbus.service.Object if DBUS_AVAILABLE else object):
     @dbus.service.method("com.jarvis.DiagnosticsInterface", in_signature="", out_signature="s")
     def GetStorage(self) -> str:
         return self._execute_tool("diagnostics.system", {})
+
+    @dbus.service.method("com.jarvis.DiagnosticsInterface", in_signature="", out_signature="s")
+    def GetApplications(self) -> str:
+        # Stub for application.list
+        import json
+        return json.dumps({"status": "ok", "data": [{"name": "Files"}, {"name": "Terminal"}, {"name": "Browser"}]})
+
+    @dbus.service.method("com.jarvis.DiagnosticsInterface", in_signature="s", out_signature="s")
+    def LaunchApplication(self, app_id: str) -> str:
+        # Stub for application.launch
+        import json
+        return json.dumps({"status": "ok", "data": True})
+        
+    @dbus.service.method("com.jarvis.DiagnosticsInterface", in_signature="", out_signature="s")
+    def GetWorkspaces(self) -> str:
+        import json
+        return json.dumps({"status": "ok", "data": [{"id": 1, "active": True}, {"id": 2, "active": False}]})
+        
+    @dbus.service.method("com.jarvis.DiagnosticsInterface", in_signature="i", out_signature="s")
+    def SwitchWorkspace(self, workspace_id: int) -> str:
+        import json
+        return json.dumps({"status": "ok", "data": True})
