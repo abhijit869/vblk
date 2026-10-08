@@ -61,6 +61,8 @@ def setup_themes(base_dir: str = "desktop/themes"):
         "window_controls": "left",         # Mac OS style
         "corner_radius": 12,
         "blur_effects": True,
+        "gtk_theme": "MacTahoe-Dark",
+        "icon_theme": "MacTahoe",
         "ai_integration": {
             "file_explorer": True,
             "navigation": True,

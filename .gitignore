@@ -15,7 +15,7 @@ id_rsa*
 id_ed25519*
 
 # Build output
-build/
+/build/
 dist/
 target/
 node_modules/
@@ -33,3 +33,17 @@ coverage/
 .vscode/
 *.swp
 *.swo
+
+# Temporary VM images and caches
+.cache/
+cache/
+*.qcow2
+*.raw
+*.vmdk
+*.vdi
+*.tmp
+*.bak
+*.old
+*.orig
+*.gguf
+llama-server

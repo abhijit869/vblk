@@ -11,7 +11,7 @@
 **Fix:** Configured `live-build` to explicitly use GRUB (`--bootloader grub`), generating both proper BIOS and UEFI structures.
 
 ## 2. Build Failure ("Killed sudo lb build")
-**Symptom:** The previous repository logs show the build terminating with `./run_build.sh: line 10: 259649 Killed sudo lb build`.
+**Symptom:** The previous repository logs show the build terminating with `./scripts/build/build-iso.sh: line 10: 259649 Killed sudo lb build`.
 **Diagnosis Level:** PROVEN (Squashfs memory usage) / HIGH-CONFIDENCE PROBABLE (Historical SIGKILL reason)
 **Evidence:**
 - Observed current mksquashfs memory peak: ~5,029,081,088 bytes (≈4.68 GiB).

@@ -46,9 +46,13 @@ mkdir -p config/includes.chroot/usr/lib/jarvis/llama.cpp
 mkdir -p config/includes.chroot/usr/lib/jarvis/scripts 
 mkdir -p config/includes.chroot/etc/jarvis 
 mkdir -p config/includes.chroot/etc/sudoers.d 
-
+mkdir -p config/includes.chroot/etc/dbus-1/system.d
+cp ../config/dbus/com.jarvis.Core.conf config/includes.chroot/etc/dbus-1/system.d/
+mkdir -p config/includes.chroot/usr/local/bin
+mkdir -p config/includes.chroot/usr/local/lib
 cp ../downloads/models/Qwen3-1.7B-Q4_K_M.gguf config/includes.chroot/usr/lib/jarvis/models/emergency/ || true 
-cp ../dist/llama.cpp/llama-server config/includes.chroot/usr/lib/jarvis/llama.cpp/ || true 
+cp ../dist/llama.cpp/llama-server config/includes.chroot/usr/local/bin/ || true 
+cp -a ../dist/llama.cpp/lib*.so* config/includes.chroot/usr/local/lib/ || true 
 cp ../config/local-ai/jarvis-local-ai.env config/includes.chroot/etc/jarvis/local-ai.env || true 
 cp ../scripts/local-ai-lifecycle.sh config/includes.chroot/usr/lib/jarvis/scripts/ || true 
 chmod +x config/includes.chroot/usr/lib/jarvis/scripts/local-ai-lifecycle.sh || true 
@@ -59,6 +63,7 @@ chmod 440 config/includes.chroot/etc/sudoers.d/jarvis-local-ai || true
 # Post-install hooks
 cat << 'HOOK' > config/hooks/normal/01-enable-jarvis.hook.chroot
 #!/bin/sh
+ldconfig
 # 1. Enable services
 systemctl enable jarvis-core.service
 systemctl enable jarvis-eventbus.service
@@ -67,6 +72,8 @@ systemctl enable zramswap.service
 # 2. Setup Jarvis user and GUI autologin
 if ! id -u jarvis >/dev/null 2>&1; then
     useradd -m -s /bin/bash jarvis
+    echo "jarvis:jarvis" | chpasswd
+    usermod -aG sudo jarvis
 fi
 chown -R jarvis:jarvis /opt/jarvis
 # Create log and lib directories for jarvis
@@ -94,3 +101,6 @@ HOOK
 chmod +x config/hooks/normal/01-enable-jarvis.hook.chroot
 
 echo "=> Build setup complete! Run 'sudo lb build' to generate the highly optimized ISO."
+
+mkdir -p config/includes.chroot/etc/ssh/sshd_config.d
+echo "PasswordAuthentication yes" > config/includes.chroot/etc/ssh/sshd_config.d/live.conf

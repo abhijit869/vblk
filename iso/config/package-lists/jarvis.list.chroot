@@ -36,3 +36,4 @@ xdg-utils
 shared-mime-info
 libglib2.0-bin
 python3-gi
+curl

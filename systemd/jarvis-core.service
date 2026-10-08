@@ -1,11 +1,13 @@
 [Unit]
 Description=JARVIS OS Core API and Control Layer
-After=network.target
+Wants=jarvis-local-ai.service
+After=network.target jarvis-local-ai.service
 
 [Service]
 Type=simple
 User=jarvis
 Group=jarvis
+ExecStartPre=/bin/bash -c 'until curl -s http://127.0.0.1:8081/health >/dev/null; do sleep 1; done'
 ExecStart=/usr/bin/python3 -m jarvis_core.cli daemon
 Environment="PYTHONPATH=/opt/jarvis/python"
 Environment="JARVIS_AI_PROVIDER=openai-compatible"

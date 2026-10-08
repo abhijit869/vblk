@@ -7,7 +7,7 @@ Type=simple
 User=jarvis
 Group=jarvis
 EnvironmentFile=/etc/jarvis/local-ai.env
-ExecStart=/usr/lib/jarvis/llama.cpp/llama-server \
+ExecStart=/usr/local/bin/llama-server \
     -m ${JARVIS_LOCAL_AI_MODEL_PATH} \
     --host ${JARVIS_LOCAL_AI_HOST} \
     --port ${JARVIS_LOCAL_AI_PORT} \

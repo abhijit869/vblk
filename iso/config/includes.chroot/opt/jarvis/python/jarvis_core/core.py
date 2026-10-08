@@ -1,10 +1,10 @@
 """JARVIS v0.1 control loop.
 
-    User text
-      -> AI Gateway (choose tool calls)
-      -> Tool Registry (validate, policy, execute, redact, limit)
-      -> AI Gateway (turn redacted results into an answer)
-      -> User
+User text
+  -> AI Gateway (choose tool calls)
+  -> Tool Registry (validate, policy, execute, redact, limit)
+  -> AI Gateway (turn redacted results into an answer)
+  -> User
 """
 
 from __future__ import annotations
@@ -55,29 +55,49 @@ class JarvisCore:
             session_id = self._memory_engine.create_session()
         ai_request = AIRequest(
             prompt=text,
-            tools=tuple(_tool_spec(definition) for definition in self._tools.definitions(self._max_risk)),
+            tools=tuple(
+                _tool_spec(definition)
+                for definition in self._tools.definitions(self._max_risk)
+            ),
         )
         self._audit_log.append(
-            AuditRecord(ai_request.request_id, "ai.request", "jarvis-core", "ai-gateway", "started")
+            AuditRecord(
+                ai_request.request_id,
+                "ai.request",
+                "jarvis-core",
+                "ai-gateway",
+                "started",
+            )
         )
         ai_response = self._ai_gateway.complete(ai_request)
         self._audit_ai(ai_request, "ai.response", ai_response)
 
         if not ai_response.tool_calls:
             if self._memory_engine and session_id:
-                self._memory_engine.record_interaction(session_id, text, ai_response.content)
-            return self._response(text, ai_response.content, ai_response, None, [], session_id)
+                self._memory_engine.record_interaction(
+                    session_id, text, ai_response.content
+                )
+            return self._response(
+                text, ai_response.content, ai_response, None, [], session_id
+            )
 
         calls = ai_response.tool_calls[:MAX_TOOL_CALLS_PER_REQUEST]
-        executed: list[tuple[AIToolCall, ToolResult]] = [(call, self._run_tool(call, session_id)) for call in calls]
+        executed: list[tuple[AIToolCall, ToolResult]] = [
+            (call, self._run_tool(call, session_id)) for call in calls
+        ]
 
-        outputs = [AIToolOutput(call=call, content=_result_for_ai(result)) for call, result in executed]
+        outputs = [
+            AIToolOutput(call=call, content=_result_for_ai(result))
+            for call, result in executed
+        ]
         answer = self._ai_gateway.respond(ai_request, outputs)
         self._audit_ai(ai_request, "ai.answer", answer)
 
         if self._memory_engine and session_id:
             self._memory_engine.record_interaction(session_id, text, answer.content)
-        return self._response(text, answer.content, ai_response, answer, executed, session_id)
+        return self._response(
+            text, answer.content, ai_response, answer, executed, session_id
+        )
 
     def _run_tool(self, call: AIToolCall, session_id: str | None = None) -> ToolResult:
         request = ToolRequest(
@@ -93,7 +113,10 @@ class JarvisCore:
                 request.caller,
                 request.tool,
                 "started",
-                metadata={"ai_call_id": call.id, "arguments": _redacted_arguments(request.arguments)},
+                metadata={
+                    "ai_call_id": call.id,
+                    "arguments": _redacted_arguments(request.arguments),
+                },
             )
         )
         result = self._tools.execute(request)
@@ -133,7 +156,14 @@ class JarvisCore:
         if event == "ai.response" and not response.tool_calls and status == "ok":
             status = "no_tool"
         self._audit_log.append(
-            AuditRecord(request.request_id, event, response.provider, "jarvis-core", status, metadata=metadata)
+            AuditRecord(
+                request.request_id,
+                event,
+                response.provider,
+                "jarvis-core",
+                status,
+                metadata=metadata,
+            )
         )
 
     def _response(
@@ -161,7 +191,11 @@ class JarvisCore:
 
 
 def _tool_spec(definition: ToolDefinition) -> AIToolSpec:
-    return AIToolSpec(name=definition.name, description=definition.description, parameters=definition.parameters)
+    return AIToolSpec(
+        name=definition.name,
+        description=definition.description,
+        parameters=definition.parameters,
+    )
 
 
 def _result_for_ai(result: ToolResult) -> str:

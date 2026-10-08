@@ -100,10 +100,9 @@ def start_dbus_service(core: JarvisCore) -> None:
     wallpaper_service = WallpaperInterface(core, bus)
     logger.info(f"JARVIS D-Bus Service running on {bus_name}")
 
-    # Normally we would import GLib and run the mainloop here
-    # from gi.repository import GLib
-    # loop = GLib.MainLoop()
-    # loop.run()
+    from gi.repository import GLib
+    loop = GLib.MainLoop()
+    loop.run()
 
 class WallpaperInterface(dbus.service.Object if DBUS_AVAILABLE else object):
     def __init__(self, core, bus, object_path="/com/jarvis/Wallpaper"):

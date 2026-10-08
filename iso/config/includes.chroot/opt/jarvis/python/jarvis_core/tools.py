@@ -30,7 +30,9 @@ PROCESS_COMMAND_LIMIT = 240
 class ToolDenied(Exception):
     """Raised by a handler when it refuses to act, with optional result data."""
 
-    def __init__(self, error: ToolError, data: dict[str, Any] | list[Any] | None = None) -> None:
+    def __init__(
+        self, error: ToolError, data: dict[str, Any] | list[Any] | None = None
+    ) -> None:
         super().__init__(error.message)
         self.error = error
         self.data = data
@@ -70,7 +72,9 @@ class ToolRegistry:
                 redacted=False,
                 truncated=False,
                 data=None,
-                error=ToolError(code="unknown_tool", message=f"Unknown tool: {request.tool}"),
+                error=ToolError(
+                    code="unknown_tool", message=f"Unknown tool: {request.tool}"
+                ),
             )
 
         decision = self._policy.authorize(request, definition)
@@ -91,21 +95,29 @@ class ToolRegistry:
         error: ToolError | None = None
         try:
             validate_arguments(definition.parameters, request.arguments)
-            data: dict[str, Any] | list[Any] | None = self._handlers[request.tool](request)
+            data: dict[str, Any] | list[Any] | None = self._handlers[request.tool](
+                request
+            )
         except ToolDenied as exc:
             status, error, data = "denied", exc.error, exc.data
         except subprocess.TimeoutExpired as exc:
             status, data = "error", None
-            error = ToolError(code="timeout", message=f"{request.tool} timed out after {exc.timeout}s")
+            error = ToolError(
+                code="timeout", message=f"{request.tool} timed out after {exc.timeout}s"
+            )
         except (ValueError, TypeError, KeyError) as exc:
             status, data = "error", None
             error = ToolError(code="invalid_arguments", message=str(exc))
         except OSError as exc:
             status, data = "error", None
             error = ToolError(code="os_error", message=str(exc))
-        except Exception as exc:  # noqa: BLE001 - tool failures must never crash the core loop
+        except (
+            Exception
+        ) as exc:
             status, data = "error", None
-            error = ToolError(code="tool_exception", message=f"{type(exc).__name__}: {exc}")
+            error = ToolError(
+                code="tool_exception", message=f"{type(exc).__name__}: {exc}"
+            )
 
         data, redacted = redact_data(data)
         data, truncated = limit_data(data, definition.output_limit_bytes)
@@ -129,7 +141,10 @@ class ToolRegistry:
 PATH_PARAMETERS = {
     "type": "object",
     "properties": {
-        "path": {"type": "string", "description": "Filesystem path to inspect. Defaults to the current directory."},
+        "path": {
+            "type": "string",
+            "description": "Filesystem path to inspect. Defaults to the current directory.",
+        },
     },
     "additionalProperties": False,
 }
@@ -139,7 +154,10 @@ FILE_READ_PARAMETERS = {
     "type": "object",
     "required": ["path"],
     "properties": {
-        "path": {"type": "string", "description": "Absolute or relative path to the file to read."},
+        "path": {
+            "type": "string",
+            "description": "Absolute or relative path to the file to read.",
+        },
     },
     "additionalProperties": False,
 }
@@ -148,8 +166,14 @@ FILE_SEARCH_PARAMETERS = {
     "type": "object",
     "required": ["pattern"],
     "properties": {
-        "pattern": {"type": "string", "description": "Glob pattern to search for (e.g. '*.py' or '*/*.md')."},
-        "path": {"type": "string", "description": "Directory to search in. Defaults to current directory."},
+        "pattern": {
+            "type": "string",
+            "description": "Glob pattern to search for (e.g. '*.py' or '*/*.md').",
+        },
+        "path": {
+            "type": "string",
+            "description": "Directory to search in. Defaults to current directory.",
+        },
     },
     "additionalProperties": False,
 }
@@ -158,8 +182,14 @@ FILE_SEARCH_PARAMETERS = {
 SYSTEM_LOGS_PARAMETERS = {
     "type": "object",
     "properties": {
-        "service": {"type": "string", "description": "Optional systemd service name to filter logs for (e.g. sshd)."},
-        "lines": {"type": "integer", "description": "Number of lines to return. Default 50."},
+        "service": {
+            "type": "string",
+            "description": "Optional systemd service name to filter logs for (e.g. sshd).",
+        },
+        "lines": {
+            "type": "integer",
+            "description": "Number of lines to return. Default 50.",
+        },
     },
     "additionalProperties": False,
 }
@@ -180,7 +210,10 @@ GUI_CLICK_PARAMETERS = {
     "properties": {
         "x": {"type": "integer"},
         "y": {"type": "integer"},
-        "button": {"type": "integer", "description": "1 for left, 2 for middle, 3 for right. Default 1."},
+        "button": {
+            "type": "integer",
+            "description": "1 for left, 2 for middle, 3 for right. Default 1.",
+        },
     },
     "additionalProperties": False,
 }
@@ -189,7 +222,10 @@ GUI_TYPE_PARAMETERS = {
     "type": "object",
     "required": ["text"],
     "properties": {
-        "text": {"type": "string", "description": "Text to type into the active window."},
+        "text": {
+            "type": "string",
+            "description": "Text to type into the active window.",
+        },
     },
     "additionalProperties": False,
 }
@@ -204,7 +240,10 @@ TERMINAL_PARAMETERS = {
                 "No pipes, redirection or shell syntax. Mutating commands are denied."
             ),
         },
-        "cwd": {"type": "string", "description": "Working directory. Defaults to the current directory."},
+        "cwd": {
+            "type": "string",
+            "description": "Working directory. Defaults to the current directory.",
+        },
     },
     "required": ["command"],
     "additionalProperties": False,
@@ -214,29 +253,76 @@ TERMINAL_PARAMETERS = {
 def build_default_registry() -> ToolRegistry:
     registry = ToolRegistry()
     registry.register(
-        ToolDefinition("system.info", 1, RiskLevel.READ, False, 2000, 32768, "Return basic OS information"),
+        ToolDefinition(
+            "system.info",
+            1,
+            RiskLevel.READ,
+            False,
+            2000,
+            32768,
+            "Return basic OS information",
+        ),
         system_info,
     )
     registry.register(
-        ToolDefinition("system.cpu", 1, RiskLevel.READ, False, 2000, 32768, "Return CPU count and load average"),
+        ToolDefinition(
+            "system.cpu",
+            1,
+            RiskLevel.READ,
+            False,
+            2000,
+            32768,
+            "Return CPU count and load average",
+        ),
         system_cpu,
     )
     registry.register(
-        ToolDefinition("system.memory", 1, RiskLevel.READ, False, 2000, 32768, "Return memory information"),
+        ToolDefinition(
+            "system.memory",
+            1,
+            RiskLevel.READ,
+            False,
+            2000,
+            32768,
+            "Return memory information",
+        ),
         system_memory,
     )
     registry.register(
         ToolDefinition(
-            "system.disk", 1, RiskLevel.READ, False, 2000, 32768, "Return disk usage for a path", PATH_PARAMETERS
+            "system.disk",
+            1,
+            RiskLevel.READ,
+            False,
+            2000,
+            32768,
+            "Return disk usage for a path",
+            PATH_PARAMETERS,
         ),
         system_disk,
     )
     registry.register(
-        ToolDefinition("process.list", 1, RiskLevel.READ, False, 3000, 65536, "Return running processes"),
+        ToolDefinition(
+            "process.list",
+            1,
+            RiskLevel.READ,
+            False,
+            3000,
+            65536,
+            "Return running processes",
+        ),
         process_list,
     )
     registry.register(
-        ToolDefinition("service.list", 1, RiskLevel.READ, False, 3000, 65536, "Return systemd services"),
+        ToolDefinition(
+            "service.list",
+            1,
+            RiskLevel.READ,
+            False,
+            3000,
+            65536,
+            "Return systemd services",
+        ),
         service_list,
     )
     registry.register(
@@ -252,49 +338,185 @@ def build_default_registry() -> ToolRegistry:
         ),
         terminal_execute,
     )
-    
+
     registry.register(
-        ToolDefinition("network.interfaces", 1, RiskLevel.READ, False, 2000, 32768, "Return network interfaces"),
+        ToolDefinition(
+            "network.interfaces",
+            1,
+            RiskLevel.READ,
+            False,
+            2000,
+            32768,
+            "Return network interfaces",
+        ),
         network_interfaces,
     )
     registry.register(
-        ToolDefinition("network.status", 1, RiskLevel.READ, False, 2000, 32768, "Return network routes and IP addresses"),
+        ToolDefinition(
+            "network.status",
+            1,
+            RiskLevel.READ,
+            False,
+            2000,
+            32768,
+            "Return network routes and IP addresses",
+        ),
         network_status,
     )
     registry.register(
-        ToolDefinition("file.read", 1, RiskLevel.READ, False, 2000, 262144, "Read utf-8 text file contents", FILE_READ_PARAMETERS),
+        ToolDefinition(
+            "file.read",
+            1,
+            RiskLevel.READ,
+            False,
+            2000,
+            262144,
+            "Read utf-8 text file contents",
+            FILE_READ_PARAMETERS,
+        ),
         file_read,
     )
     registry.register(
-        ToolDefinition("file.search", 1, RiskLevel.READ, False, 5000, 65536, "Search for files by glob pattern recursively", FILE_SEARCH_PARAMETERS),
+        ToolDefinition(
+            "file.search",
+            1,
+            RiskLevel.READ,
+            False,
+            5000,
+            65536,
+            "Search for files by glob pattern recursively",
+            FILE_SEARCH_PARAMETERS,
+        ),
         file_search,
     )
-    
+
     registry.register(
-        ToolDefinition("system.logs", 1, RiskLevel.READ, False, 5000, 131072, "Read system logs using journalctl", SYSTEM_LOGS_PARAMETERS),
+        ToolDefinition(
+            "system.logs",
+            1,
+            RiskLevel.READ,
+            False,
+            5000,
+            131072,
+            "Read system logs using journalctl",
+            SYSTEM_LOGS_PARAMETERS,
+        ),
         system_logs,
     )
     registry.register(
-        ToolDefinition("security.block_ip", 1, RiskLevel.HIGH, True, 5000, 8192, "Block a malicious IP address defensively", SECURITY_BLOCK_PARAMETERS),
+        ToolDefinition(
+            "security.block_ip",
+            1,
+            RiskLevel.HIGH,
+            True,
+            5000,
+            8192,
+            "Block a malicious IP address defensively",
+            SECURITY_BLOCK_PARAMETERS,
+        ),
         security_block_ip,
     )
-    
+
     registry.register(
-        ToolDefinition("gui.window_list", 1, RiskLevel.READ, False, 2000, 32768, "List active GUI windows and metadata"),
+        ToolDefinition(
+            "gui.window_list",
+            1,
+            RiskLevel.READ,
+            False,
+            2000,
+            32768,
+            "List active GUI windows and metadata",
+        ),
         gui_window_list,
     )
     registry.register(
-        ToolDefinition("gui.screenshot", 1, RiskLevel.READ, False, 5000, 4096, "Take a screenshot and return the path"),
+        ToolDefinition(
+            "gui.screenshot",
+            1,
+            RiskLevel.READ,
+            False,
+            5000,
+            4096,
+            "Take a screenshot and return the path",
+        ),
         gui_screenshot,
     )
     registry.register(
-        ToolDefinition("gui.click", 1, RiskLevel.MEDIUM, True, 2000, 4096, "Move mouse and click coordinates", GUI_CLICK_PARAMETERS),
+        ToolDefinition(
+            "gui.click",
+            1,
+            RiskLevel.MEDIUM,
+            True,
+            2000,
+            4096,
+            "Move mouse and click coordinates",
+            GUI_CLICK_PARAMETERS,
+        ),
         gui_click,
     )
     registry.register(
-        ToolDefinition("gui.type", 1, RiskLevel.MEDIUM, True, 10000, 4096, "Type text into the focused window", GUI_TYPE_PARAMETERS),
+        ToolDefinition(
+            "gui.type",
+            1,
+            RiskLevel.MEDIUM,
+            True,
+            10000,
+            4096,
+            "Type text into the focused window",
+            GUI_TYPE_PARAMETERS,
+        ),
         gui_type,
     )
+    registry.register(
+        ToolDefinition(
+            "file.list", 1, RiskLevel.READ, False, 2000, 32768,
+            "List directory contents",
+            {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}
+        ), _handle_file_list
+    )
+    registry.register(
+        ToolDefinition(
+            "file.stat", 1, RiskLevel.READ, False, 2000, 32768,
+            "Get file metadata",
+            {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}
+        ), _handle_file_stat
+    )
+    registry.register(
+        ToolDefinition(
+            "file.mkdir", 1, RiskLevel.LOW, True, 2000, 32768,
+            "Create a directory",
+            {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}
+        ), _handle_file_mkdir
+    )
+    registry.register(
+        ToolDefinition(
+            "file.copy", 1, RiskLevel.LOW, True, 2000, 32768,
+            "Copy a file or directory",
+            {"type": "object", "properties": {"src": {"type": "string"}, "dst": {"type": "string"}}, "required": ["src", "dst"], "additionalProperties": False}
+        ), _handle_file_copy
+    )
+    registry.register(
+        ToolDefinition(
+            "file.rename", 1, RiskLevel.MEDIUM, True, 2000, 32768,
+            "Rename a file or directory",
+            {"type": "object", "properties": {"src": {"type": "string"}, "name": {"type": "string"}}, "required": ["src", "name"], "additionalProperties": False}
+        ), _handle_file_rename
+    )
+    registry.register(
+        ToolDefinition(
+            "file.move", 1, RiskLevel.MEDIUM, True, 2000, 32768,
+            "Move a file or directory",
+            {"type": "object", "properties": {"src": {"type": "string"}, "dst": {"type": "string"}}, "required": ["src", "dst"], "additionalProperties": False}
+        ), _handle_file_move
+    )
+    registry.register(
+        ToolDefinition(
+            "file.trash", 1, RiskLevel.MEDIUM, True, 2000, 32768,
+            "Move a file to trash",
+            {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}
+        ), _handle_file_trash
+    )
+    register_wallpaper_tools(registry)
     return registry
 
 
@@ -370,10 +592,23 @@ def process_list(_: ToolRequest) -> list[dict[str, Any]]:
 
 
 def service_list(_: ToolRequest) -> list[dict[str, Any]]:
-    command = ["systemctl", "list-units", "--type=service", "--all", "--no-pager", "--plain", "--no-legend"]
-    completed = subprocess.run(command, capture_output=True, text=True, timeout=3, check=False)
+    command = [
+        "systemctl",
+        "list-units",
+        "--type=service",
+        "--all",
+        "--no-pager",
+        "--plain",
+        "--no-legend",
+    ]
+    completed = subprocess.run(
+        command, capture_output=True, text=True, timeout=3, check=False
+    )
     if completed.returncode != 0:
-        message = completed.stderr.strip() or f"systemctl exited with code {completed.returncode}"
+        message = (
+            completed.stderr.strip()
+            or f"systemctl exited with code {completed.returncode}"
+        )
         raise OSError(message)
 
     services: list[dict[str, Any]] = []
@@ -405,7 +640,9 @@ def terminal_execute(request: ToolRequest) -> dict[str, Any]:
     timeout_ms = int(request.arguments.get("timeout_ms", 2000))
     if request.timeout_ms is not None:
         timeout_ms = min(timeout_ms, request.timeout_ms)
-    output_limit = int(request.arguments.get("output_limit_bytes", TERMINAL_MAX_OUTPUT_BYTES))
+    output_limit = int(
+        request.arguments.get("output_limit_bytes", TERMINAL_MAX_OUTPUT_BYTES)
+    )
 
     result = TerminalEngine().execute(
         command=command,
@@ -428,9 +665,10 @@ def terminal_execute(request: ToolRequest) -> dict[str, Any]:
         "redacted": result.redacted,
     }
     if result.denied:
-        raise ToolDenied(ToolError(code="command_risk_exceeds_limit", message=result.stderr), data)
+        raise ToolDenied(
+            ToolError(code="command_risk_exceeds_limit", message=result.stderr), data
+        )
     return data
-
 
 
 def network_interfaces(_: ToolRequest) -> list[dict[str, Any]]:
@@ -438,7 +676,7 @@ def network_interfaces(_: ToolRequest) -> list[dict[str, Any]]:
     net_path = Path("/sys/class/net")
     if not net_path.exists():
         return interfaces
-    
+
     for iface in net_path.iterdir():
         if not iface.is_dir():
             continue
@@ -449,41 +687,55 @@ def network_interfaces(_: ToolRequest) -> list[dict[str, Any]]:
         except (OSError, ValueError):
             mac = state = ""
             mtu = 0
-            
-        interfaces.append({
-            "name": iface.name,
-            "mac_address": mac,
-            "state": state,
-            "mtu": mtu,
-        })
+
+        interfaces.append(
+            {
+                "name": iface.name,
+                "mac_address": mac,
+                "state": state,
+                "mtu": mtu,
+            }
+        )
     return sorted(interfaces, key=lambda x: x["name"])
 
 
 def network_status(_: ToolRequest) -> dict[str, Any]:
     addresses = []
     routes = []
-    
+
     try:
-        completed = subprocess.run(["ip", "-j", "address"], capture_output=True, text=True, timeout=2, check=False)
+        completed = subprocess.run(
+            ["ip", "-j", "address"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
         if completed.returncode == 0 and completed.stdout.strip():
             addresses = json.loads(completed.stdout)
     except (OSError, json.JSONDecodeError):
         pass
 
     try:
-        completed = subprocess.run(["ip", "-j", "route"], capture_output=True, text=True, timeout=2, check=False)
+        completed = subprocess.run(
+            ["ip", "-j", "route"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
         if completed.returncode == 0 and completed.stdout.strip():
             routes = json.loads(completed.stdout)
     except (OSError, json.JSONDecodeError):
         pass
 
-    return {
-        "addresses": addresses,
-        "routes": routes
-    }
+    return {"addresses": addresses, "routes": routes}
 
 
 def file_read(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.pathguard import PathGuard
+    ok, reason = PathGuard.check_read(request.arguments["path"], ai_tool_path=True)
+    if not ok: return {"path": request.arguments["path"], "error": reason}
     path = Path(request.arguments["path"]).resolve()
     try:
         content = path.read_text(encoding="utf-8")
@@ -495,11 +747,14 @@ def file_read(request: ToolRequest) -> dict[str, Any]:
 
 
 def file_search(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.pathguard import PathGuard
+    ok, reason = PathGuard.check_read(request.arguments["path"], ai_tool_path=True)
+    if not ok: return {"path": request.arguments["path"], "error": reason}
     path = Path(request.arguments.get("path", ".")).resolve()
     pattern = request.arguments["pattern"]
     if not path.is_dir():
         raise OSError(f"Directory not found: {path}")
-    
+
     results = []
     try:
         for p in path.rglob(pattern):
@@ -508,21 +763,27 @@ def file_search(request: ToolRequest) -> dict[str, Any]:
                 break
     except Exception as e:
         return {"path": str(path), "pattern": pattern, "error": str(e)}
-        
+
     return {"path": str(path), "pattern": pattern, "results": results}
 
 
 def system_logs(request: ToolRequest) -> dict[str, Any]:
     lines = int(request.arguments.get("lines", 50))
     service = request.arguments.get("service")
-    
+
     command = ["journalctl", "--no-pager", "-n", str(min(lines, 1000))]
     if service:
         command.extend(["-u", service])
-        
+
     try:
-        completed = subprocess.run(command, capture_output=True, text=True, timeout=5, check=False)
-        return {"logs": completed.stdout, "service": service, "exit_code": completed.returncode}
+        completed = subprocess.run(
+            command, capture_output=True, text=True, timeout=5, check=False
+        )
+        return {
+            "logs": completed.stdout,
+            "service": service,
+            "exit_code": completed.returncode,
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -533,8 +794,15 @@ def security_block_ip(request: ToolRequest) -> dict[str, Any]:
     # Requires elevated permissions (RiskLevel.HIGH)
     command = ["iptables", "-A", "INPUT", "-s", ip_address, "-j", "DROP"]
     try:
-        completed = subprocess.run(command, capture_output=True, text=True, timeout=3, check=False)
-        return {"ip_address": ip_address, "action": "blocked", "success": completed.returncode == 0, "stderr": completed.stderr}
+        completed = subprocess.run(
+            command, capture_output=True, text=True, timeout=3, check=False
+        )
+        return {
+            "ip_address": ip_address,
+            "action": "blocked",
+            "success": completed.returncode == 0,
+            "stderr": completed.stderr,
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -542,56 +810,91 @@ def security_block_ip(request: ToolRequest) -> dict[str, Any]:
 def gui_window_list(_: ToolRequest) -> list[dict[str, Any]]:
     # Uses wmctrl to list windows
     try:
-        completed = subprocess.run(["wmctrl", "-l", "-p", "-x"], capture_output=True, text=True, timeout=2, check=False)
+        completed = subprocess.run(
+            ["wmctrl", "-l", "-p", "-x"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
         if completed.returncode != 0:
-            return [{"error": "wmctrl failed or X11 not available", "stderr": completed.stderr}]
-            
+            return [
+                {
+                    "error": "wmctrl failed or X11 not available",
+                    "stderr": completed.stderr,
+                }
+            ]
+
         windows = []
         for line in completed.stdout.splitlines():
             parts = line.split(None, 6)
             if len(parts) >= 6:
-                windows.append({
-                    "window_id": parts[0],
-                    "desktop": parts[1],
-                    "pid": parts[2],
-                    "class": parts[3],
-                    "host": parts[4],
-                    "title": parts[5] if len(parts) > 5 else "",
-                })
+                windows.append(
+                    {
+                        "window_id": parts[0],
+                        "desktop": parts[1],
+                        "pid": parts[2],
+                        "class": parts[3],
+                        "host": parts[4],
+                        "title": parts[5] if len(parts) > 5 else "",
+                    }
+                )
         return windows
     except Exception as e:
         return [{"error": str(e)}]
+
 
 def gui_screenshot(_: ToolRequest) -> dict[str, Any]:
     # Capture screen using scrot or import
     path = "/tmp/jarvis_screenshot.png"
     try:
-        completed = subprocess.run(["scrot", path, "-o"], capture_output=True, text=True, timeout=5, check=False)
+        completed = subprocess.run(
+            ["scrot", path, "-o"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
         if completed.returncode == 0:
             return {"status": "success", "file": path}
         return {"status": "error", "stderr": completed.stderr}
     except Exception as e:
         return {"error": str(e)}
 
+
 def gui_click(request: ToolRequest) -> dict[str, Any]:
     x = request.arguments["x"]
     y = request.arguments["y"]
     button = request.arguments.get("button", 1)
-    
+
     try:
-        completed = subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", str(button)], capture_output=True, text=True, timeout=2, check=False)
+        completed = subprocess.run(
+            ["xdotool", "mousemove", str(x), str(y), "click", str(button)],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
         return {"success": completed.returncode == 0, "stderr": completed.stderr}
     except Exception as e:
         return {"error": str(e)}
+
 
 def gui_type(request: ToolRequest) -> dict[str, Any]:
     text = request.arguments["text"]
     try:
         # We use --clearmodifiers and --delay to ensure typing is robust
-        completed = subprocess.run(["xdotool", "type", "--clearmodifiers", "--delay", "50", text], capture_output=True, text=True, timeout=10, check=False)
+        completed = subprocess.run(
+            ["xdotool", "type", "--clearmodifiers", "--delay", "50", text],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
         return {"success": completed.returncode == 0, "stderr": completed.stderr}
     except Exception as e:
         return {"error": str(e)}
+
 
 def _read_meminfo() -> dict[str, int]:
     values: dict[str, int] = {}
@@ -636,7 +939,9 @@ def _parse_proc_command(process_path: Path, stat: str) -> str:
         raw_command = (process_path / "cmdline").read_bytes()
     except (FileNotFoundError, PermissionError, ProcessLookupError):
         raw_command = b""
-    command = raw_command.replace(b"\x00", b" ").decode("utf-8", errors="replace").strip()
+    command = (
+        raw_command.replace(b"\x00", b" ").decode("utf-8", errors="replace").strip()
+    )
     if not command and "(" in stat and ")" in stat:
         command = stat[stat.find("(") + 1 : stat.rfind(")")]
     command, _ = redact_text(command)
@@ -673,14 +978,21 @@ def limit_data(data: Any, limit_bytes: int) -> tuple[Any, bool]:
         limited: dict[str, Any] = {}
         for key, value in data.items():
             if isinstance(value, str) and len(value.encode("utf-8")) > per_field:
-                value = value.encode("utf-8")[:per_field].decode("utf-8", errors="ignore") + "\n[TRUNCATED]"
+                value = (
+                    value.encode("utf-8")[:per_field].decode("utf-8", errors="ignore")
+                    + "\n[TRUNCATED]"
+                )
             elif isinstance(value, list):
                 value, _ = limit_data(value, per_field)
             limited[key] = value
         return limited, True
 
     if isinstance(data, str):
-        return data.encode("utf-8")[:limit_bytes].decode("utf-8", errors="ignore") + "\n[TRUNCATED]", True
+        return (
+            data.encode("utf-8")[:limit_bytes].decode("utf-8", errors="ignore")
+            + "\n[TRUNCATED]",
+            True,
+        )
 
     return data, True
 
@@ -720,3 +1032,166 @@ def validate_arguments(schema: dict[str, Any], arguments: dict[str, Any]) -> Non
         is_bool_for_number = isinstance(value, bool) and "boolean" not in allowed
         if not isinstance(value, python_types) or is_bool_for_number:
             raise ValueError(f"argument {name} must be of type {' or '.join(allowed)}")
+
+
+def _handle_file_list(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.list_dir(request.arguments["path"])
+
+def _handle_file_stat(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.stat(request.arguments["path"])
+
+def _handle_file_mkdir(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.mkdir(request.arguments["path"])
+
+def _handle_file_copy(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.copy(request.arguments["src"], request.arguments["dst"])
+
+def _handle_file_rename(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.rename(request.arguments["src"], request.arguments["name"])
+
+def _handle_file_move(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.move(request.arguments["src"], request.arguments["dst"])
+
+def _handle_file_trash(request: ToolRequest) -> dict[str, Any]:
+    from jarvis_core.files import FileService
+    return FileService.trash(request.arguments["path"])
+
+
+WALLPAPER_SET_PARAMETERS = {
+    "type": "object",
+    "required": ["id"],
+    "properties": {
+        "id": {"type": "string", "description": "ID of the wallpaper to set."},
+    },
+    "additionalProperties": False,
+}
+
+WALLPAPER_ADD_PARAMETERS = {
+    "type": "object",
+    "required": ["source_path", "name"],
+    "properties": {
+        "source_path": {"type": "string", "description": "Absolute path to the image file to add."},
+        "name": {"type": "string", "description": "Name for the wallpaper."},
+    },
+    "additionalProperties": False,
+}
+
+WALLPAPER_REMOVE_PARAMETERS = {
+    "type": "object",
+    "required": ["id"],
+    "properties": {
+        "id": {"type": "string", "description": "ID of the wallpaper to remove."},
+    },
+    "additionalProperties": False,
+}
+
+WALLPAPER_FAVORITE_PARAMETERS = {
+    "type": "object",
+    "required": ["id", "favorite"],
+    "properties": {
+        "id": {"type": "string", "description": "ID of the wallpaper."},
+        "favorite": {"type": "boolean", "description": "True to favorite, False to unfavorite."},
+    },
+    "additionalProperties": False,
+}
+
+def register_wallpaper_tools(registry: ToolRegistry) -> None:
+    def _call_dbus(method: str, *args) -> Any:
+        import dbus
+        bus = dbus.SystemBus()
+        proxy = bus.get_object("com.jarvis.Core", "/com/jarvis/Wallpaper")
+        iface = dbus.Interface(proxy, "com.jarvis.WallpaperInterface")
+        return getattr(iface, method)(*args)
+
+    def handle_list(request: ToolRequest):
+        import json
+        return json.loads(_call_dbus("GetAll"))
+        
+    def handle_get_current(request: ToolRequest):
+        import json
+        return json.loads(_call_dbus("GetCurrent"))
+
+    def handle_set(request: ToolRequest):
+        wid = request.arguments["id"]
+        return {"success": bool(_call_dbus("SetCurrent", wid))}
+
+    def handle_add(request: ToolRequest):
+        import json
+        path = request.arguments["source_path"]
+        name = request.arguments["name"]
+        return json.loads(_call_dbus("AddWallpaper", path, name))
+
+    def handle_remove(request: ToolRequest):
+        wid = request.arguments["id"]
+        return {"success": bool(_call_dbus("RemoveWallpaper", wid))}
+
+    def handle_favorite(request: ToolRequest):
+        wid = request.arguments["id"]
+        fav = request.arguments["favorite"]
+        return {"success": bool(_call_dbus("SetFavorite", wid, fav))}
+
+    def handle_reset_default(request: ToolRequest):
+        return {"success": bool(_call_dbus("ResetDefault"))}
+
+    registry.register(
+        ToolDefinition(
+            "wallpaper.list", 1, RiskLevel.READ, False, 2000, 65536,
+            "List available wallpapers.",
+            {"type": "object", "properties": {}, "additionalProperties": False}
+        ),
+        handle_list
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.get_current", 1, RiskLevel.READ, False, 2000, 65536,
+            "Get the currently active wallpaper.",
+            {"type": "object", "properties": {}, "additionalProperties": False}
+        ),
+        handle_get_current
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.set", 1, RiskLevel.LOW, True, 2000, 1024,
+            "Set the desktop wallpaper.",
+            WALLPAPER_SET_PARAMETERS
+        ),
+        handle_set
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.add", 1, RiskLevel.MEDIUM, True, 5000, 10240,
+            "Import an image into the wallpaper library.",
+            WALLPAPER_ADD_PARAMETERS
+        ),
+        handle_add
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.remove", 1, RiskLevel.MEDIUM, True, 2000, 1024,
+            "Delete a user wallpaper from the library.",
+            WALLPAPER_REMOVE_PARAMETERS
+        ),
+        handle_remove
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.favorite", 1, RiskLevel.LOW, True, 2000, 1024,
+            "Mark or unmark a wallpaper as favorite.",
+            WALLPAPER_FAVORITE_PARAMETERS
+        ),
+        handle_favorite
+    )
+    registry.register(
+        ToolDefinition(
+            "wallpaper.reset_default", 1, RiskLevel.LOW, True, 2000, 1024,
+            "Restore the JARVIS Default wallpaper.",
+            {"type": "object", "properties": {}, "additionalProperties": False}
+        ),
+        handle_reset_default
+    )
