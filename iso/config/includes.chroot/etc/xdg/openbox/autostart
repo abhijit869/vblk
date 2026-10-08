@@ -1,5 +1,5 @@
 # Start JARVIS Wallpaper Daemon to manage background
 /usr/bin/python3 /opt/jarvis/desktop/wallpaper_daemon.py &
 
-# Start terminal with JARVIS shell automatically
-x-terminal-emulator -e /usr/bin/python3 -m jarvis_core.shell &
+# Start JARVIS Shell
+/usr/bin/python3 /opt/jarvis/desktop/jarvis_shell.py &

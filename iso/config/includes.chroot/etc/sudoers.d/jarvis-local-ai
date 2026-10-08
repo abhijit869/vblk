@@ -1,0 +1,1 @@
+jarvis ALL=(root) NOPASSWD: /usr/lib/jarvis/scripts/local-ai-lifecycle.sh

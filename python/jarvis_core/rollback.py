@@ -77,17 +77,24 @@ class SnapshotEngine:
         logger.warning(f"INITIATING ROLLBACK to {snap_id} via {self._mode}...")
 
         if self._mode == "btrfs":
-            # This requires reboot or live-mount trickery, simplified for prototype
-            logger.info("BTRFS rollback staged for next reboot.")
-            # In a real system, you'd swap the default subvolume here.
+            try:
+                # Find the default subvolume ID
+                import re
+                info = subprocess.run(["btrfs", "subvolume", "show", "/"], capture_output=True, text=True).stdout
+                # BTRFS rollback for snapshot
+                subprocess.run(["btrfs", "subvolume", "delete", "/"], check=False)
+                subprocess.run(["btrfs", "subvolume", "snapshot", str(snap_path), "/"], check=True)
+                logger.info("BTRFS rollback applied.")
+            except Exception as e:
+                logger.error(f"BTRFS rollback failed: {e}")
         else:
             # Restore critical configs
             subprocess.run(
                 ["rsync", "-a", str(snap_path / "etc/"), "/etc/"], check=True
             )
-            subprocess.run(
-                ["rsync", "-a", str(snap_path / "jarvis/"), "/opt/jarvis/"], check=True
-            )
+            subprocess.run(["rsync", "-a", str(snap_path / "jarvis/"), "/opt/jarvis/"], check=True)
+            if (snap_path / "var_jarvis").exists():
+                subprocess.run(["rsync", "-a", str(snap_path / "var_jarvis/"), "/var/lib/jarvis/"], check=False)
             logger.info("Config rollback applied instantly.")
 
         return True

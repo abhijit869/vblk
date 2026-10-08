@@ -50,14 +50,17 @@ mkdir -p config/includes.chroot/etc/dbus-1/system.d
 cp ../config/dbus/com.jarvis.Core.conf config/includes.chroot/etc/dbus-1/system.d/
 mkdir -p config/includes.chroot/usr/local/bin
 mkdir -p config/includes.chroot/usr/local/lib
-cp ../downloads/models/Qwen3-1.7B-Q4_K_M.gguf config/includes.chroot/usr/lib/jarvis/models/emergency/ || true 
-cp ../dist/llama.cpp/llama-server config/includes.chroot/usr/local/bin/ || true 
-cp -a ../dist/llama.cpp/lib*.so* config/includes.chroot/usr/local/lib/ || true 
-cp ../config/local-ai/jarvis-local-ai.env config/includes.chroot/etc/jarvis/local-ai.env || true 
-cp ../scripts/local-ai-lifecycle.sh config/includes.chroot/usr/lib/jarvis/scripts/ || true 
-chmod +x config/includes.chroot/usr/lib/jarvis/scripts/local-ai-lifecycle.sh || true 
-cp ../config/local-ai/sudoers.d/jarvis-local-ai config/includes.chroot/etc/sudoers.d/ || true 
-chmod 440 config/includes.chroot/etc/sudoers.d/jarvis-local-ai || true 
+cp ../downloads/models/Qwen3-1.7B-Q4_K_M.gguf config/includes.chroot/usr/lib/jarvis/models/emergency/
+cp ../dist/llama.cpp/llama-server config/includes.chroot/usr/local/bin/
+cp -a ../dist/llama.cpp/lib*.so* config/includes.chroot/usr/local/lib/
+
+mkdir -p config/includes.chroot/etc/ld.so.conf.d
+echo "/usr/local/lib" > config/includes.chroot/etc/ld.so.conf.d/jarvis.conf
+cp ../config/local-ai/jarvis-local-ai.env config/includes.chroot/etc/jarvis/local-ai.env
+cp ../scripts/local-ai-lifecycle.sh config/includes.chroot/usr/lib/jarvis/scripts/
+chmod +x config/includes.chroot/usr/lib/jarvis/scripts/local-ai-lifecycle.sh
+cp ../config/local-ai/sudoers.d/jarvis-local-ai config/includes.chroot/etc/sudoers.d/
+chmod 440 config/includes.chroot/etc/sudoers.d/jarvis-local-ai
 
 
 # Post-install hooks
@@ -77,7 +80,7 @@ if ! id -u jarvis >/dev/null 2>&1; then
 fi
 chown -R jarvis:jarvis /opt/jarvis
 # Create log and lib directories for jarvis
-mkdir -p /var/log/jarvis /var/lib/jarvis
+mkdir -p /var/log/jarvis/local-ai /var/lib/jarvis/local-ai
 chown -R jarvis:jarvis /var/log/jarvis /var/lib/jarvis
 
 # 3. Precompile Python to bytecode for faster startup and lower RAM usage
@@ -95,6 +98,10 @@ cp /opt/jarvis/desktop/jarvis-files.desktop /usr/share/applications/
 chmod 644 /usr/share/applications/jarvis-files.desktop
 cp /opt/jarvis/desktop/icons/jarvis-files.svg /usr/share/pixmaps/
 chmod 644 /usr/share/pixmaps/jarvis-files.svg
+
+cp /opt/jarvis/desktop/jarvis-store.desktop /usr/share/applications/
+chmod 644 /usr/share/applications/jarvis-store.desktop
+
 su - jarvis -c "xdg-mime default jarvis-files.desktop inode/directory"
 xdg-mime default jarvis-files.desktop inode/directory
 HOOK

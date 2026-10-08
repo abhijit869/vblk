@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=JARVIS Store
+Comment=Software Center for JARVIS OS
+Exec=python3 /opt/jarvis/desktop/jarvis_store.py
+Icon=/usr/share/pixmaps/jarvis-store.svg
+Terminal=false
+Type=Application
+Categories=System;Utility;Core;

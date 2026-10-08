@@ -12,8 +12,8 @@ Environment="PYTHONPATH=/opt/jarvis/python"
 Restart=always
 RestartSec=3s
 
-# Requires access to monitor processes and logs
-CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_SYS_PTRACE
+# Removed CAP_DAC_READ_SEARCH CAP_SYS_PTRACE
+CapabilityBoundingSet=
 ProtectSystem=full
 ReadOnlyPaths=/var/log
 NoNewPrivileges=yes

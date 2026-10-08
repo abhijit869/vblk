@@ -119,7 +119,19 @@ class FileExplorer(tk.Tk):
         self.refresh()
 
     def _build_ui(self) -> None:
-        # Intentionally removed clam theme to use JARVIS OS system look
+        
+        style = ttk.Style(self)
+        style.theme_use('default')
+        style.configure(".", background="#0B1120", foreground="#FFFFFF", fieldbackground="#1E293B")
+        style.configure("Treeview", background="#0F172A", foreground="#FFFFFF", fieldbackground="#0F172A", borderwidth=0)
+        style.map("Treeview", background=[('selected', '#3B82F6')])
+        style.configure("Treeview.Heading", background="#1E293B", foreground="#94A3B8", relief="flat")
+        style.configure("TButton", background="#1E293B", foreground="#FFFFFF", borderwidth=0, padding=4)
+        style.map("TButton", background=[('active', '#3B82F6')])
+        style.configure("TFrame", background="#0B1120")
+        style.configure("TEntry", fieldbackground="#1E293B", foreground="#FFFFFF", borderwidth=0)
+        self.configure(bg="#0B1120")
+
         
         toolbar = ttk.Frame(self, padding=(8, 8, 8, 4))
         toolbar.pack(fill="x")
@@ -157,11 +169,11 @@ class FileExplorer(tk.Tk):
         ttk.Label(sidebar, text="Places", font=("", 10, "bold")).pack(anchor="w", pady=(0, 4))
         
         places = [
-            ("Home", HOME),
-            ("Documents", HOME / "Documents"),
-            ("Downloads", HOME / "Downloads"),
-            ("Trash", Path(os.environ.get("XDG_DATA_HOME", HOME / ".local" / "share")) / "Trash" / "files"),
-            ("Root", Path("/")),
+            ("🏠 Home", HOME),
+            ("📄 Documents", HOME / "Documents"),
+            ("📥 Downloads", HOME / "Downloads"),
+            ("🗑 Trash", Path(os.environ.get("XDG_DATA_HOME", HOME / ".local" / "share")) / "Trash" / "files"),
+            ("⛁ Root", Path("/")),
         ]
         
         for name, p in places:

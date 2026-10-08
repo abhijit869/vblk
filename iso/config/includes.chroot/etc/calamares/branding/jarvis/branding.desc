@@ -1,0 +1,29 @@
+---
+componentName:  jarvis
+
+welcomeStyleCalamares:   true
+
+strings:
+    productName:         JARVIS OS
+    shortProductName:    JARVIS
+    version:             1.0
+    shortVersion:        1.0
+    versionedName:       JARVIS OS 1.0
+    shortVersionedName:  JARVIS 1.0
+    bootloaderEntryName: JARVIS OS
+    productUrl:          https://jarvis-os.ai
+    supportUrl:          https://jarvis-os.ai/support
+    knownIssuesUrl:      https://jarvis-os.ai/issues
+    releaseNotesUrl:     https://jarvis-os.ai/release
+
+images:
+    productLogo:         "show.png"
+    productIcon:         "show.png"
+    productWelcome:      "welcome.png"
+
+slideshow:               "show.qml"
+
+style:
+   sidebarBackground:    "#0a1428"
+   sidebarText:          "#FFFFFF"
+   sidebarTextSelect:    "#00FFFF"

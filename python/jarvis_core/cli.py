@@ -8,6 +8,7 @@ import sys
 
 from jarvis_core.config import build_ai_gateway, load_ai_config
 from jarvis_core.core import JarvisCore
+from jarvis_core.memory import SQLiteMemoryEngine
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -28,7 +29,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"jarvis: configuration error: {exc}", file=sys.stderr)
         return 2
 
-    core = JarvisCore(ai_gateway=build_ai_gateway(config))
+    core = JarvisCore(ai_gateway=build_ai_gateway(config), memory_engine=SQLiteMemoryEngine())
 
     if args.request[0] == "daemon":
         from jarvis_core.dbus_service import start_dbus_service

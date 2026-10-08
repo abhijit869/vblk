@@ -1,0 +1,32 @@
+[Unit]
+Description=JARVIS Local Emergency AI (Qwen3-1.7B)
+After=network.target
+
+[Service]
+Type=simple
+User=jarvis
+Group=jarvis
+EnvironmentFile=/etc/jarvis/local-ai.env
+ExecStart=/usr/lib/jarvis/llama.cpp/llama-server \
+    -m ${JARVIS_LOCAL_AI_MODEL_PATH} \
+    --host ${JARVIS_LOCAL_AI_HOST} \
+    --port ${JARVIS_LOCAL_AI_PORT} \
+    -c ${JARVIS_LOCAL_AI_CONTEXT} \
+    -t ${JARVIS_LOCAL_AI_THREADS} \
+    -np ${JARVIS_LOCAL_AI_PARALLEL} \
+    -ngl ${JARVIS_LOCAL_AI_GPU_LAYERS}
+
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+
+ReadWritePaths=/var/lib/jarvis/local-ai
+ReadWritePaths=/var/log/jarvis/local-ai
+
+[Install]
+WantedBy=multi-user.target

@@ -16,6 +16,7 @@ class JarvisControlPanel(tk.Tk):
         
         self.bus = None
         self.jarvis_iface = None
+        self.jarvis_diag = None
         
         self.create_widgets()
         self.connect_dbus()
@@ -26,9 +27,11 @@ class JarvisControlPanel(tk.Tk):
             return
             
         try:
-            self.bus = dbus.SessionBus()
+            self.bus = dbus.SystemBus()
             proxy = self.bus.get_object("com.jarvis.Core", "/com/jarvis/Core")
             self.jarvis_iface = dbus.Interface(proxy, "com.jarvis.CoreInterface")
+            dproxy = self.bus.get_object("com.jarvis.Core", "/com/jarvis/Diagnostics")
+            self.jarvis_diag = dbus.Interface(dproxy, "com.jarvis.DiagnosticsInterface")
             status = self.jarvis_iface.Status()
             self.status_label.config(text=f"Core Status: {status}", foreground="green")
         except dbus.DBusException:
@@ -89,8 +92,70 @@ class JarvisControlPanel(tk.Tk):
         ttk.Button(btn_frame, text="Apply", command=self.apply_wallpaper).pack(side=tk.LEFT, padx=2)
         ttk.Button(btn_frame, text="Reset Default", command=self.reset_wallpaper).pack(side=tk.LEFT, padx=2)
         
+        # --- Network Tab ---
+        network_frame = ttk.Frame(notebook, padding="10")
+        notebook.add(network_frame, text="Network")
+        
+        self.net_text = tk.Text(network_frame, height=15, width=45, bg="#111827", fg="#A7F3D0", font=("Consolas", 10))
+        self.net_text.pack(fill=tk.BOTH, expand=True)
+        ttk.Button(network_frame, text="Refresh Network", command=self.refresh_network).pack(pady=5)
+        
+        # --- System Monitor Tab ---
+        monitor_frame = ttk.Frame(notebook, padding="10")
+        notebook.add(monitor_frame, text="System Monitor")
+        
+        self.mon_text = tk.Text(monitor_frame, height=15, width=45, bg="#111827", fg="#38BDF8", font=("Consolas", 10))
+        self.mon_text.pack(fill=tk.BOTH, expand=True)
+        ttk.Button(monitor_frame, text="Refresh Monitor", command=self.refresh_monitor).pack(pady=5)
+        
         self.wp_manager = None
         self.refresh_wallpapers()
+        
+        # Initial data fetch
+        self.after(500, self.refresh_network)
+        self.after(500, self.refresh_monitor)
+
+    
+
+    def refresh_network(self):
+        self.net_text.delete(1.0, tk.END)
+        self.net_text.insert(tk.END, "Loading network status...\n")
+        self.update()
+        if not self.jarvis_diag:
+            self.net_text.insert(tk.END, "Error: D-Bus not connected")
+            return
+        try:
+            import json
+            res = json.loads(self.jarvis_diag.GetNetwork())
+            if res.get('status') == 'ok':
+                self.net_text.delete(1.0, tk.END)
+                self.net_text.insert(tk.END, res['data'].get('interfaces', ''))
+                self.net_text.insert(tk.END, "\n\nRoutes:\n")
+                self.net_text.insert(tk.END, res['data'].get('routes', ''))
+            else:
+                self.net_text.insert(tk.END, "Error retrieving data")
+        except Exception as e:
+            self.net_text.insert(tk.END, f"Error: {e}")
+        
+    def refresh_monitor(self):
+        self.mon_text.delete(1.0, tk.END)
+        self.mon_text.insert(tk.END, "Loading system monitor...\n")
+        self.update()
+        if not self.jarvis_diag:
+            self.mon_text.insert(tk.END, "Error: D-Bus not connected")
+            return
+        try:
+            import json
+            res = json.loads(self.jarvis_diag.GetSystem())
+            if res.get('status') == 'ok':
+                self.mon_text.delete(1.0, tk.END)
+                self.mon_text.insert(tk.END, res['data'].get('memory', ''))
+                self.mon_text.insert(tk.END, "\n\nCPU:\n")
+                self.mon_text.insert(tk.END, res['data'].get('cpu', ''))
+            else:
+                self.mon_text.insert(tk.END, "Error retrieving data")
+        except Exception as e:
+            self.mon_text.insert(tk.END, f"Error: {e}")
 
     def refresh_wallpapers(self):
         if not dbus:

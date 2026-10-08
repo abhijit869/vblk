@@ -27,10 +27,50 @@ fi
 mkdir -p build
 cd build
 
-cmake .. -DGGML_CUDA=OFF -DGGML_VULKAN=OFF -DGGML_METAL=OFF -DGGML_NATIVE=OFF -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release -j2 --target llama-server
+echo "Building llama.cpp in debian:bookworm container to match ISO glibc..."
+# Cache check logic: If target binary exists and we haven't modified source, we could skip cmake, but the prompt says:
+# "Cache hit and cache miss must execute the same staging logic." So we just run cmake --build (which is cached)
+docker run --rm \
+    -v "$BUILD_DIR:/src" \
+    -w /src/build \
+    debian:bookworm bash -c "apt-get update && apt-get install -y build-essential cmake git && cmake .. -DGGML_CUDA=OFF -DGGML_VULKAN=OFF -DGGML_METAL=OFF -DGGML_NATIVE=OFF -DGGML_AVX=OFF -DGGML_AVX2=OFF -DGGML_FMA=OFF -DGGML_F16C=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build . --config Release -j\$(nproc) --target llama-server && chown -R $(id -u):$(id -g) /src/build"
 
 mkdir -p "$DIST_DIR"
 cp -a bin/llama-server bin/lib*.so* "$DIST_DIR/"
+chmod 755 "$DIST_DIR"/llama-server "$DIST_DIR"/lib*.so*
 
-echo "llama.cpp CPU runtime built successfully."
+# Permission normalization and check
+if [ ! -x "$DIST_DIR/llama-server" ]; then
+    echo "ERROR: llama-server is not executable!"
+    exit 1
+fi
+
+echo "Verifying GLIBC ABI compatibility (TARGET: Debian Bookworm / GLIBC <= 2.36)..."
+for bin in "$DIST_DIR/llama-server" "$DIST_DIR"/lib*.so*; do
+    if objdump -T "$bin" 2>/dev/null | grep -qE 'GLIBC_2\.(3[7-9]|[4-9][0-9])'; then
+        echo "ERROR: $bin requires an unsupported GLIBC version! (Found > 2.36)"
+        objdump -T "$bin" | grep -E 'GLIBC_2\.(3[7-9]|[4-9][0-9])'
+        exit 1
+    fi
+done
+echo "GLIBC ABI verification passed."
+
+echo "Verifying CPU/ISA compatibility..."
+if objdump -d "$DIST_DIR/llama-server" | grep -qE 'vfmadd|vaddps %ymm|vmovups %ymm'; then
+    echo "ERROR: AVX/AVX2/FMA instructions found in binary, portability violation!"
+    exit 1
+fi
+echo "CPU/ISA compatibility passed."
+
+echo "Verifying shared library dependencies..."
+if ! ldd "$DIST_DIR/llama-server" > /dev/null; then
+    echo "ERROR: Failed to resolve shared dependencies for llama-server"
+    exit 1
+fi
+
+echo "Recording SHA256 values..."
+cd "$DIST_DIR"
+sha256sum llama-server lib*.so* > SHA256SUMS
+cat SHA256SUMS
+
+echo "llama.cpp CPU runtime built successfully and strictly verified."

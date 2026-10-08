@@ -7,7 +7,6 @@ After=network.target jarvis-local-ai.service
 Type=simple
 User=jarvis
 Group=jarvis
-ExecStartPre=/bin/bash -c 'until curl -s http://127.0.0.1:8081/health >/dev/null; do sleep 1; done'
 ExecStart=/usr/bin/python3 -m jarvis_core.cli daemon
 Environment="PYTHONPATH=/opt/jarvis/python"
 Environment="JARVIS_AI_PROVIDER=openai-compatible"
@@ -20,7 +19,9 @@ Restart=on-failure
 RestartSec=5s
 
 # Security Hardening for the daemon itself
-CapabilityBoundingSet=CAP_NET_ADMIN CAP_SYS_ADMIN
+# Removed CAP_SYS_ADMIN, keep network admin only if needed, but ideally we can drop both.
+# Keeping empty bounding set or just dropping CAP_SYS_ADMIN
+CapabilityBoundingSet=CAP_NET_ADMIN
 ProtectSystem=strict
 ReadWritePaths=/var/log/jarvis /var/lib/jarvis
 PrivateTmp=yes

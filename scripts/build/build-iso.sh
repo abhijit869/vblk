@@ -9,6 +9,16 @@ sudo ./scripts/build/clean.sh
 ./scripts/build/fetch-local-model.sh
 ./scripts/build/build-llama-cpp.sh
 
+# Explicit validation before ISO generation
+if [ ! -f "dist/llama.cpp/llama-server" ]; then
+    echo "ERROR: dist/llama.cpp/llama-server is missing. Build failed."
+    exit 1
+fi
+if [ ! -f "downloads/models/Qwen3-1.7B-Q4_K_M.gguf" ]; then
+    echo "ERROR: Qwen3 model is missing. Build failed."
+    exit 1
+fi
+
 sudo mkdir -p /tmp/jarvis_build
 sudo cp -r iso python systemd desktop config scripts downloads dist /tmp/jarvis_build/
 sudo chown -R $USER:$USER /tmp/jarvis_build
