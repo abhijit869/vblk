@@ -4,6 +4,36 @@
 
 ![JARVIS OS Futuristic Desktop Showcase](images/jarvis_showcase.jpeg)
 
+### Download or publish the ISO
+
+The ISO is too large for Git history and is published as split GitHub Release
+assets. To download and verify it:
+
+```bash
+./scripts/release/download-iso.sh v1.0-iso
+```
+
+For a standalone setup script that downloads both parts, verifies them,
+reassembles the ISO, and verifies the completed ISO:
+
+```bash
+curl -fL -o setup-iso.sh \
+  https://github.com/abhijit869/vblk/releases/download/v1.0-iso/setup-iso.sh
+chmod +x setup-iso.sh
+./setup-iso.sh
+```
+
+To publish a newly built `dist/JARVIS-OS-1.0-amd64.iso`, authenticate with
+GitHub first, then run:
+
+```bash
+gh auth login
+./scripts/release/publish-iso-release.sh v1.0-iso
+```
+
+The publisher splits the ISO into GitHub-safe parts, uploads SHA-256 and
+SHA-512 checksums, and never adds the ISO to Git commits.
+
 **JARVIS OS** is a fundamentally new type of Linux distribution. It is NOT merely Debian with a JARVIS assistant on top; it is an **AI-native operating system** based on a **Debian 12 (Bookworm)** foundation. JARVIS OS provides the intelligence, control plane, system tooling, AI orchestration, diagnostics, recovery, and a completely redesigned user experience.
 
 The long-term vision of JARVIS OS is to completely redesign major user-facing components, including the desktop, file manager, application launcher, networking UI, system management, recovery experience, and terminal experience. 
